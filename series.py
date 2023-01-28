@@ -30,7 +30,20 @@ def printParsed(parsedData):
 
 if not os.path.exists(dir):
     os.mkdir(dir)
-definedArgs=["-c","-s","-n", "-d"]
+definedArgs=["-c","-s","-n", "-d","-h"]
+if not len(args) or "-h" in args:
+    print('''Usage: series [OPTION...] [OPTION INPUTS]
+
+Help Options:
+    -h                                                          Shows help options 
+
+Application Options:
+    -n <series name> <seasons> <episodes>                       Initial a series with seasons and episodes.
+    -s <series name>                                            Show a series progress
+    -d <series name>                                            Delete a series
+    -c <series name> <season> <episodes>                        Change a season to desired episodes
+    <series name> <episodes count>                              Add or remove from watched.''')
+    exit()
 noargs = not len([x for x in args if x in definedArgs])
 
 if noargs:
