@@ -30,7 +30,7 @@ def printParsed(parsedData):
 
 if not os.path.exists(dir):
     os.mkdir(dir)
-definedArgs=["-s","-n", "-d"]
+definedArgs=["-c","-s","-n", "-d"]
 noargs = not len([x for x in args if x in definedArgs])
 
 if noargs:
@@ -82,4 +82,35 @@ if "-n" in args:
             f.close()
     except IndexError as e:
         pass
+if "-c" in args:
+    # -c serie 4 5
+    # season 4, 5 episodes
+    index=args.index("-c")
+    if index==len(args)-1:
+        index=-1
+    try:
+        file=getFile(args[index+1])
+        f = open(file, "r")
+        parsedData=parseData(f.read())
+        f.close()
+        indexArgument=int(args[index+2])-1
+        episodes=int(args[index+3])
+
+        if parsedData[indexArgument][0] > episodes:
+            parsedData[indexArgument][0] = episodes
+
+        parsedData[indexArgument][1] = episodes
+
+        f= open(file, "w")
+        data=convertToData(parsedData)
+        try:
+            f.write(data)
+            printParsed(parsedData)
+        except Exception as e:
+            raise e
+        f.close()
+    except IndexError as e:
+        print(e)
+        pass
+
 
