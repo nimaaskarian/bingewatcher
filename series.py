@@ -35,13 +35,29 @@ noargs = not len([x for x in args if x in definedArgs])
 
 if noargs:
     file=getFile(args[0])
+    times=1
+    try:
+        times=int(args[1])
+    except IndexError as e:
+        pass
+    isNegative=abs(times) != times
+
     f=open(file,"r")
     parsedData = parseData(f.read())
+    if isNegative: parsedData.reverse()
     f.close()
-    for i,l in enumerate(parsedData):
-        if l[0] != l[1]:
-            parsedData[i][0]+=1
+    for j in range(abs(times)):
+        for i,l in enumerate(parsedData):
+            if isNegative:
+                if parsedData[i][0] == 0:
+                    continue
+                parsedData[i][0]-=1
+            else:
+                if l[0] != l[1]:
+                    parsedData[i][0]+=1
+                else: continue
             break
+    if isNegative: parsedData.reverse()
     f=open(file,"w")
     data=convertToData(parsedData)
     try:
@@ -112,5 +128,3 @@ if "-c" in args:
     except IndexError as e:
         print(e)
         pass
-
-
