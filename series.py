@@ -7,8 +7,15 @@ args=sys.argv[1:]
 
 dir=os.path.expanduser("~/.series")
 
-def getFile(name):
-    return os.path.join(dir,name)
+def getName(nameOrIndex):
+    try:
+        if int(nameOrIndex): nameOrIndex = os.listdir(dir)[int(nameOrIndex)-1]
+    except:
+        pass
+    return nameOrIndex
+
+def getFile(nameOrIndex):
+    return os.path.join(dir,getName(nameOrIndex))
 def convertToData(parsedData):
     return "\n".join([ f"{ l[0] }%:%+{ l[1] }" for l in parsedData])
 
@@ -36,7 +43,9 @@ def parseData(data):
     # ]
     return [[int(s) for s in line.split("%:%") ] for line in data.splitlines()]
 
-def printParsed(parsedData):
+def printParsed(parsedData,nameOrIndex=""):
+    if nameOrIndex:
+        print(getName(nameOrIndex)+":")
     for i,line in enumerate(parsedData):
         if line[0]!=line[1]:
             print(f"Season {i+1}: {line[0]}/{line[1]}")
@@ -98,7 +107,7 @@ if noargs and len(cleanargs):
     data=convertToData(parsedData)
     try:
         f.write(data)
-        printParsed(parseData(data))
+        printParsed(parseData(data),cleanargs[0])
     except Exception as e:
         raise e
 
@@ -108,7 +117,7 @@ if "-s" in args:
         index=-1
     try:
         f=open(getFile(args[index+1]),"r")
-        printParsed(parseData(f.read()))
+        printParsed(parseData(f.read()),args[index+1])
             
     except Exception as e:
         raise e
@@ -157,7 +166,7 @@ if "-c" in args:
         data=convertToData(parsedData)
         try:
             f.write(data)
-            printParsed(parsedData)
+            printParsed(parsedData,args[index+1])
         except Exception as e:
             raise e
         f.close()
@@ -176,8 +185,7 @@ if "-L" in args:
     for item in os.listdir(dir):
         f = open(getFile(item),"r")
         parsedData = parseData((f.read()))
-        print(item+":")
-        printParsed(parsedData)
+        printParsed(parsedData,item)
         print()
 if "-e" in args:
     index=args.index("-e")
