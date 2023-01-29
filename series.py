@@ -47,7 +47,7 @@ def printParsed(parsedData):
 
 if not os.path.exists(dir):
     os.mkdir(dir)
-definedArgs=["-l","-c","-s","-n", "-d","-h","-L","-m"]
+definedArgs=["-l","-c","-s","-n", "-d","-h","-L","-m","-e"]
 if "-h" in args:
     print('''Usage: series [OPTION...] [OPTION INPUTS]
 
@@ -62,12 +62,13 @@ Application Options:
     -l                                                          List all the series
     -L                                                          Show all the series
     -m                                                          Minimal show (only show current season)
+    -e                                                          Output the current episode without newlines
     <series name> <episodes count>                              Add or remove from watched.''')
     exit()
 noargs = not len([x for x in args if x in definedArgs and x!="-m"]) and len(args)
+cleanargs=[arg for arg in args if arg not in definedArgs]
 
 if noargs:
-    cleanargs=[arg for arg in args if arg not in definedArgs]
     file=getFile(cleanargs[0])
     times=0
     try:
@@ -177,4 +178,8 @@ if "-L" in args:
         print(item+":")
         printParsed(parsedData)
         print()
-
+if "-e" in args:
+    index=args.index("-e")
+    if index==len(args)-1:
+        index=-1
+    print(nextEpisode(parseData(open(getFile(args[index+1])).read())),end="")
