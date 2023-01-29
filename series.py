@@ -2,19 +2,25 @@
 
 import sys
 import os
+import requests
+import json
 
 args=sys.argv[1:]
 
 dir=os.path.expanduser("~/.series")
+jsondir=os.path.join(dir,".json")
+
+def listdir():
+    return [x for x in os.listdir(dir) if os.path.isfile(os.path.join(dir,x)) ]
 
 def getName(nameOrIndex):
     try:
-        if int(nameOrIndex): nameOrIndex = os.listdir(dir)[int(nameOrIndex)-1]
+        if int(nameOrIndex): nameOrIndex = listdir()[int(nameOrIndex)-1]
     except:
         pass
     return nameOrIndex
 
-def getFile(nameOrIndex):
+def getFile(nameOrIndex,dir=dir):
     return os.path.join(dir,getName(nameOrIndex))
 def convertToData(parsedData):
     return "\n".join([ f"{ l[0] }%:%+{ l[1] }" for l in parsedData])
@@ -57,7 +63,9 @@ def printParsed(parsedData,nameOrIndex=""):
 
 if not os.path.exists(dir):
     os.mkdir(dir)
-definedArgs=["-l","-c","-s","-n", "-d","-h","-L","-x","-e"]
+if not os.path.exists(jsondir):
+    os.mkdir(jsondir)
+definedArgs=["-l","-c","-s","-n", "-d","-h","-L","-x","-e","-o"]
 if "-h" in args:
     print('''Usage: series [OPTION...] [OPTION INPUTS]
 
@@ -65,7 +73,7 @@ Help Options:
     -h                                                          Shows help options 
 
 Application Options:
-    -n <series name> <seasons> <episodes>                       Initial a series with seasons and episodes.
+    -n <series name> <seasons> <episodes>                       Initialize a series with seasons and episodes
     -s <series name>                                            Show a series progress
     -d <series name>                                            Delete a series
     -c <series name> <season> <episodes>                        Change a season to desired episodes
@@ -73,6 +81,7 @@ Application Options:
     -L                                                          Show all the series
     -x                                                          Expanded show (show other seasons)
     -e                                                          Output the current episode without newlines
+    -o                                                          Initialize or update a series with online api
     <series name> <episodes count>                              Add or remove from watched.''')
     exit()
 noargs = not len([x for x in args if x in definedArgs and x!="-x"]) and len(args)
@@ -137,12 +146,49 @@ if "-n" in args:
         file=getFile(args[index+1])
         f = open(file, "x")
         f.close()
+        f= open(file, "a")
         for i in range(0, int(args[index+2])):
-            f= open(file, "a")
             f.write(f"0%:%{args[index+3]}\n")
-            f.close()
+        f.close()
     except IndexError as e:
         pass
+if "-o" in args:
+    index=args.index("-o")
+    if index==len(args)-1:
+        index=-1
+    # try:
+    item=args[index+1]
+    x = requests.get(f"https://www.episodate.com/api/show-details?q={item.replace(' ','-')}")
+    file=getFile(item)
+    parsedData = []
+    if not os.path.isfile(file):
+        f = open(file, "x")
+        f.close()
+    else:
+        f = open(file, "r")
+        parsedData = parseData(f.read())
+        for i in range(len(parsedData)):
+            parsedData[i][1] = 0
+    for e in json.loads(x.text)["tvShow"]["episodes"]:
+        index=int(e['season'])-1;
+        try:
+            parsedData[index]
+        except IndexError:
+            while (index != len(parsedData)-1):
+                parsedData.append([0,0])
+        parsedData[index][1] += 1
+    f= open(file, "w")
+    f.write(convertToData(parsedData))
+    f.close()
+    jsonfile=getFile(item,jsondir)
+    if not os.path.isfile(jsonfile):
+        f = open(jsonfile, "x")
+        f.close()
+    f= open(jsonfile, "w")
+    f.write(x.text)
+    f.close()
+    # except IndexError as e:
+        # pass
 if "-c" in args:
     # -c serie 4 5
     # season 4, 5 episodes
@@ -173,7 +219,7 @@ if "-c" in args:
     except IndexError as e:
         print("Invalid arguments!")
 if not len(args) or "-l" in args:
-    for item in os.listdir(dir):
+    for item in listdir():
         f = open(getFile(item),"r")
         parsedData = parseData((f.read()))
         watchedAll = getWatchedAll(parsedData)
@@ -182,7 +228,7 @@ if not len(args) or "-l" in args:
         # print(f"{item}, {watchedAll[0]} episodes, {getPercentage(*watchedAll)}% watched. next is S{lastSeason}E{parsedData[lastSeason-1][0]}")
         print()
 if "-L" in args:
-    for item in os.listdir(dir):
+    for item in listdir():
         f = open(getFile(item),"r")
         parsedData = parseData((f.read()))
         printParsed(parsedData,item)
