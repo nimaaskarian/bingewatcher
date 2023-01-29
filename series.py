@@ -1,6 +1,7 @@
+#!/bin/python3
+
 import sys
 import os
-import math
 
 args=sys.argv[1:]
 
@@ -11,6 +12,18 @@ def getFile(name):
 def convertToData(parsedData):
     return "\n".join([ f"{ l[0] }%:%+{ l[1] }" for l in parsedData])
 
+def getWatchedAll(parsedData):
+    watched=0
+    all=0
+    for line in parsedData:
+        watched+=int(line[0])
+        all+=int(line[1])
+    return [watched,all]
+
+def getPercentage(part,whole):
+    return round(part*1000//whole)/10
+
+
 def parseData(data):
     # [
     #         [watched, all],
@@ -19,18 +32,16 @@ def parseData(data):
     return [[int(s) for s in line.split("%:%") ] for line in data.splitlines()]
 
 def printParsed(parsedData):
-    watched=0
-    all=0
     for i,line in enumerate(parsedData):
-        watched+=int(line[0])
-        all+=int(line[1])
-        print(f"Season {i+1}: {line[0]}/{line[1]}")
-    print(f"Progress: {round(watched*1000/all)/10}%")
+        if ( "-m" in args ) == (line[0]!=line[1] and line[0]!=0):
+            print(f"Season {i+1}: {line[0]}/{line[1]}")
+    watchedAll = getWatchedAll(parsedData)
+    print(f"Progress: {getPercentage(*watchedAll)}%")
         
 
 if not os.path.exists(dir):
     os.mkdir(dir)
-definedArgs=["-c","-s","-n", "-d","-h"]
+definedArgs=["-l","-c","-s","-n", "-d","-h","-L","-m"]
 if not len(args) or "-h" in args:
     print('''Usage: series [OPTION...] [OPTION INPUTS]
 
@@ -42,13 +53,16 @@ Application Options:
     -s <series name>                                            Show a series progress
     -d <series name>                                            Delete a series
     -c <series name> <season> <episodes>                        Change a season to desired episodes
+    -l                                                          List all the series
+    -L                                                          Show all the series
+    -m                                                          Minimal show (only show current season)
     <series name> <episodes count>                              Add or remove from watched.''')
     exit()
 noargs = not len([x for x in args if x in definedArgs])
 
 if noargs:
     file=getFile(args[0])
-    times=1
+    times=0
     try:
         times=int(args[1])
     except IndexError as e:
@@ -141,3 +155,21 @@ if "-c" in args:
     except IndexError as e:
         print(e)
         pass
+if "-l" in args:
+    for item in os.listdir(dir):
+        f = open(getFile(item),"r")
+        parsedData = parseData((f.read()))
+        watchedAll = getWatchedAll(parsedData)
+        lastSeason = len([x for x in parsedData if x[0] != 0])
+        print(item+":")
+        print("{all} episodes, {percentage}% watched. next is S{seasons:0{width}d}E{episodes:0{width}d}".format(item=item, all=watchedAll[0],percentage=getPercentage(*watchedAll),seasons=lastSeason,episodes=parsedData[lastSeason-1][0]+1,width=2))
+        # print(f"{item}, {watchedAll[0]} episodes, {getPercentage(*watchedAll)}% watched. next is S{lastSeason}E{parsedData[lastSeason-1][0]}")
+        print()
+if "-L" in args:
+    for item in os.listdir(dir):
+        f = open(getFile(item),"r")
+        parsedData = parseData((f.read()))
+        print(item+":")
+        printParsed(parsedData)
+        print()
+
