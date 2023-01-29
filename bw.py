@@ -71,7 +71,7 @@ if not os.path.exists(jsondir):
     os.mkdir(jsondir)
 definedArgs=["-l","-c","-s","-n", "-d","-h","-L","-x","-e","-o"]
 if "-h" in args:
-    print('''Usage: series [OPTION...] [OPTION INPUTS]
+    print('''Usage: bw [OPTION...] [OPTION INPUTS]
 
 Help Options:
     -h                                                          Shows help options 
