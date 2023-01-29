@@ -68,7 +68,7 @@ Application Options:
 noargs = not len([x for x in args if x in definedArgs and x!="-m"]) and len(args)
 cleanargs=[arg for arg in args if arg not in definedArgs]
 
-if noargs:
+if noargs and len(cleanargs):
     file=getFile(cleanargs[0])
     times=0
     try:
