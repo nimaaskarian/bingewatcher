@@ -13,6 +13,9 @@ jsondir=os.path.join(dir,".json")
 def listdir():
     return [x for x in os.listdir(dir) if os.path.isfile(os.path.join(dir,x)) ]
 
+def newSeries(seasons, episodes):
+    return [[0,int(episodes)] for s in range(int(seasons)) ]
+
 def getName(nameOrIndex):
     try:
         if int(nameOrIndex): nameOrIndex = listdir()[int(nameOrIndex)-1]
@@ -57,6 +60,7 @@ def printParsed(parsedData,nameOrIndex=""):
             print(f"Season {i+1}: {line[0]}/{line[1]}")
             if not "-x" in args: break
     watchedAll = getWatchedAll(parsedData)
+    print(f"Episodes: {watchedAll[1]}")
     print(f"Progress: {getPercentage(*watchedAll)}%")
     print(f"Next episode: {nextEpisode(parsedData)}")
         
@@ -144,11 +148,11 @@ if "-n" in args:
         index=-1
     try:
         file=getFile(args[index+1])
-        f = open(file, "x")
-        f.close()
-        f= open(file, "a")
-        for i in range(0, int(args[index+2])):
-            f.write(f"0%:%{args[index+3]}\n")
+        if not os.path.isfile(file):
+            f = open(file, "x")
+            f.close()
+        f= open(file, "w")
+        f.write(convertToData(newSeries(*args[2:])))
         f.close()
     except IndexError as e:
         pass
@@ -187,6 +191,7 @@ if "-o" in args:
     f= open(jsonfile, "w")
     f.write(x.text)
     f.close()
+    printParsed(parsedData)
     # except IndexError as e:
         # pass
 if "-c" in args:
