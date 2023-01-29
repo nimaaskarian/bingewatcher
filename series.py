@@ -12,6 +12,10 @@ def getFile(name):
 def convertToData(parsedData):
     return "\n".join([ f"{ l[0] }%:%+{ l[1] }" for l in parsedData])
 
+def nextEpisode(parsedData,formatWidth=2):
+    lastSeason = len([x for x in parsedData if x[0] != 0])
+    return "S{seasons:0{width}d}E{episodes:0{width}d}".format(seasons=lastSeason,episodes=parsedData[lastSeason-1][0]+1,width=formatWidth)
+
 def getWatchedAll(parsedData):
     watched=0
     all=0
@@ -33,16 +37,18 @@ def parseData(data):
 
 def printParsed(parsedData):
     for i,line in enumerate(parsedData):
-        if ( "-m" in args ) == (line[0]!=line[1] and line[0]!=0):
+        if ( not "-m" in args ) or line[0]!=line[1]:
             print(f"Season {i+1}: {line[0]}/{line[1]}")
+            if "-m" in args: break
     watchedAll = getWatchedAll(parsedData)
     print(f"Progress: {getPercentage(*watchedAll)}%")
+    print(f"Next episode: {nextEpisode(parsedData)}")
         
 
 if not os.path.exists(dir):
     os.mkdir(dir)
 definedArgs=["-l","-c","-s","-n", "-d","-h","-L","-m"]
-if not len(args) or "-h" in args:
+if "-h" in args:
     print('''Usage: series [OPTION...] [OPTION INPUTS]
 
 Help Options:
@@ -58,13 +64,14 @@ Application Options:
     -m                                                          Minimal show (only show current season)
     <series name> <episodes count>                              Add or remove from watched.''')
     exit()
-noargs = not len([x for x in args if x in definedArgs])
+noargs = not len([x for x in args if x in definedArgs and x!="-m"]) and len(args)
 
 if noargs:
-    file=getFile(args[0])
+    cleanargs=[arg for arg in args if arg not in definedArgs]
+    file=getFile(cleanargs[0])
     times=0
     try:
-        times=int(args[1])
+        times=int(cleanargs[1])
     except IndexError as e:
         pass
     isNegative=abs(times) != times
@@ -153,16 +160,14 @@ if "-c" in args:
             raise e
         f.close()
     except IndexError as e:
-        print(e)
-        pass
-if "-l" in args:
+        print("Invalid arguments!")
+if not len(args) or "-l" in args:
     for item in os.listdir(dir):
         f = open(getFile(item),"r")
         parsedData = parseData((f.read()))
         watchedAll = getWatchedAll(parsedData)
-        lastSeason = len([x for x in parsedData if x[0] != 0])
         print(item+":")
-        print("{all} episodes, {percentage}% watched. next is S{seasons:0{width}d}E{episodes:0{width}d}".format(item=item, all=watchedAll[0],percentage=getPercentage(*watchedAll),seasons=lastSeason,episodes=parsedData[lastSeason-1][0]+1,width=2))
+        print("{all} episodes, {percentage}% watched. next is {next}".format(item=item, all=watchedAll[0],percentage=getPercentage(*watchedAll),next=nextEpisode(parsedData)))
         # print(f"{item}, {watchedAll[0]} episodes, {getPercentage(*watchedAll)}% watched. next is S{lastSeason}E{parsedData[lastSeason-1][0]}")
         print()
 if "-L" in args:
