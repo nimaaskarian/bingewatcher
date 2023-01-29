@@ -37,9 +37,9 @@ def parseData(data):
 
 def printParsed(parsedData):
     for i,line in enumerate(parsedData):
-        if ( not "-m" in args ) or line[0]!=line[1]:
+        if line[0]!=line[1]:
             print(f"Season {i+1}: {line[0]}/{line[1]}")
-            if "-m" in args: break
+            if not "-x" in args: break
     watchedAll = getWatchedAll(parsedData)
     print(f"Progress: {getPercentage(*watchedAll)}%")
     print(f"Next episode: {nextEpisode(parsedData)}")
@@ -47,7 +47,7 @@ def printParsed(parsedData):
 
 if not os.path.exists(dir):
     os.mkdir(dir)
-definedArgs=["-l","-c","-s","-n", "-d","-h","-L","-m","-e"]
+definedArgs=["-l","-c","-s","-n", "-d","-h","-L","-x","-e"]
 if "-h" in args:
     print('''Usage: series [OPTION...] [OPTION INPUTS]
 
@@ -61,11 +61,11 @@ Application Options:
     -c <series name> <season> <episodes>                        Change a season to desired episodes
     -l                                                          List all the series
     -L                                                          Show all the series
-    -m                                                          Minimal show (only show current season)
+    -x                                                          Expanded show (show other seasons)
     -e                                                          Output the current episode without newlines
     <series name> <episodes count>                              Add or remove from watched.''')
     exit()
-noargs = not len([x for x in args if x in definedArgs and x!="-m"]) and len(args)
+noargs = not len([x for x in args if x in definedArgs and x!="-x"]) and len(args)
 cleanargs=[arg for arg in args if arg not in definedArgs]
 
 if noargs and len(cleanargs):
