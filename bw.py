@@ -7,7 +7,7 @@ import json
 
 args=sys.argv[1:]
 
-dir=os.path.expanduser("~/.series")
+dir=os.path.expanduser("~/.bingewatcher")
 jsondir=os.path.join(dir,".json")
 
 def listdir():
