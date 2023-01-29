@@ -178,7 +178,7 @@ if not len(args) or "-l" in args:
         parsedData = parseData((f.read()))
         watchedAll = getWatchedAll(parsedData)
         print(item+":")
-        print("{all} episodes, {percentage}% watched. next is {next}".format(item=item, all=watchedAll[0],percentage=getPercentage(*watchedAll),next=nextEpisode(parsedData)))
+        print("{all} episodes, {percentage}% watched. next is {next}".format(item=item, all=watchedAll[1],percentage=getPercentage(*watchedAll),next=nextEpisode(parsedData)))
         # print(f"{item}, {watchedAll[0]} episodes, {getPercentage(*watchedAll)}% watched. next is S{lastSeason}E{parsedData[lastSeason-1][0]}")
         print()
 if "-L" in args:
