@@ -31,6 +31,8 @@ def convertToData(parsedData):
 def nextEpisode(parsedData,formatWidth=2):
     lastSeason = len([x for x in parsedData if x[0] != 0])
     if lastSeason == 0: lastSeason = 1
+    if parsedData[lastSeason-1][0] >= parsedData[lastSeason-1][1]:
+        lastSeason += 1
     return "S{seasons:0{width}d}E{episodes:0{width}d}".format(seasons=lastSeason,episodes=parsedData[lastSeason-1][0]+1,width=formatWidth)
 
 def getWatchedAll(parsedData):
