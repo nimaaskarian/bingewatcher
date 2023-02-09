@@ -66,12 +66,27 @@ def printParsed(parsedData,nameOrIndex=""):
     print(f"Progress: {getPercentage(*watchedAll)}%")
     print(f"Next episode: {nextEpisode(parsedData)}")
         
+def printFinished():
+    if "-f" not in [arg.lower() for arg in args]: return
+    finished=[]
+    for item in listdir():
+        f = open(getFile(item),"r")
+        parsedData = parseData((f.read()))
+        watchedAll = getWatchedAll(parsedData)
+        if watchedAll[0] == watchedAll[1]: 
+            finished.append([item, watchedAll[1]])
+
+    if len(finished):
+        if "-f" in args: print()
+        print("Finished series:")
+        for item in finished:
+            print(f"{item[0]}: {item[1]} episodes")
 
 if not os.path.exists(dir):
     os.mkdir(dir)
 if not os.path.exists(jsondir):
     os.mkdir(jsondir)
-definedArgs=["-l","-c","-s","-n", "-d","-h","-L","-x","-e","-o"]
+definedArgs=["-l","-c","-s","-n", "-d","-h","-L","-x","-e","-o", "-F", "-f"]
 if "-h" in args:
     print('''Usage: bw [OPTION...] [OPTION INPUTS]
 
@@ -88,6 +103,8 @@ Application Options:
     -x                                                          Expanded show (show other seasons)
     -e                                                          Output the current episode without newlines
     -o                                                          Initialize or update a series with online api
+    -f                                                          Show finished shows too
+    -F                                                          Show only finished shows
     <series name> <episodes count>                              Add or remove from watched.''')
     exit()
 noargs = not len([x for x in args if x in definedArgs and x!="-x"]) and len(args)
@@ -124,7 +141,7 @@ if noargs and len(cleanargs):
         f.write(data)
         printParsed(parseData(data),cleanargs[0])
     except Exception as e:
-        raise e
+        pass
 
 if "-s" in args:
     index=args.index("-s")
@@ -225,23 +242,33 @@ if "-c" in args:
         f.close()
     except IndexError as e:
         print("Invalid arguments!")
-if not len(args) or "-l" in args:
-    for i,item in enumerate(listdir()):
-        f = open(getFile(item),"r")
-        parsedData = parseData((f.read()))
-        watchedAll = getWatchedAll(parsedData)
-        print(item+":")
-        print("{all} episodes, {percentage}% watched. next is {next}".format(item=item, all=watchedAll[1],percentage=getPercentage(*watchedAll),next=nextEpisode(parsedData)))
-        # print(f"{item}, {watchedAll[0]} episodes, {getPercentage(*watchedAll)}% watched. next is S{lastSeason}E{parsedData[lastSeason-1][0]}")
-        if i+1 != len(listdir()):
-            print()
+if not len(cleanargs) or "-l" in args:
+    if "-F" not in args:
+        for i,item in enumerate(listdir()):
+            f = open(getFile(item),"r")
+            parsedData = parseData((f.read()))
+            watchedAll = getWatchedAll(parsedData)
+            if watchedAll[0] == watchedAll[1]: 
+                continue
+            print(item+":")
+            print("{all} episodes, {percentage}% watched. next is {next}".format(item=item, all=watchedAll[1],percentage=getPercentage(*watchedAll),next=nextEpisode(parsedData)))
+            # print(f"{item}, {watchedAll[0]} episodes, {getPercentage(*watchedAll)}% watched. next is S{lastSeason}E{parsedData[lastSeason-1][0]}")
+            if i+1 != len(listdir()):
+                print()
+    printFinished()
+
 if "-L" in args:
-    for i,item in enumerate(listdir()):
-        f = open(getFile(item),"r")
-        parsedData = parseData((f.read()))
-        printParsed(parsedData,item)
-        if i+1 != len(listdir()):
-            print()
+    if "-F" not in args:
+        for i,item in enumerate(listdir()):
+            f = open(getFile(item),"r")
+            parsedData = parseData((f.read()))
+            watchedAll = getWatchedAll(parsedData)
+            if watchedAll[0] == watchedAll[1]: 
+                continue
+            printParsed(parsedData,item)
+            if i+1 != len(listdir()):
+                print()
+    printFinished()
 if "-e" in args:
     index=args.index("-e")
     if index==len(args)-1:
