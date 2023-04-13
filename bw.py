@@ -1,24 +1,48 @@
 #!/bin/python3
 
 import sys
+import random
 import os
 import requests
 import json
 
 args=sys.argv[1:]
 
-dir=os.path.expanduser("~/.bingewatcher")
+dir=os.path.expanduser("~/.cache/bingewatcher")
 jsondir=os.path.join(dir,".json")
 
 def listdir():
     return [x for x in os.listdir(dir) if os.path.isfile(os.path.join(dir,x)) ]
 
+def parseData(data):
+    # [
+    #         [watched, all],
+    #         [watched, all]
+    # ]
+    return [[int(s) for s in line.split("%:%") ] for line in data.splitlines()]
+
+def getWatchedAll(parsedData):
+    watched=0
+    all=0
+    for line in parsedData:
+        watched+=int(line[0])
+        all+=int(line[1])
+    return [watched,all]
+
 def newSeries(seasons, episodes):
     return [[0,int(episodes)] for s in range(int(seasons)) ]
 
 def getName(nameOrIndex):
+    r = random.randint(1,100000)
     try:
-        if int(nameOrIndex): nameOrIndex = listdir()[int(nameOrIndex)-1]
+        index=int(nameOrIndex)
+        for file in listdir():
+            watchedAll=getWatchedAll(parseData((open(os.path.join(dir, file),"r").read())))
+            if watchedAll[1] != watchedAll[0]:
+                if(index==1): 
+                    print(r,file, index)
+                    return file
+                index-=1
     except:
         pass
     return nameOrIndex
@@ -35,32 +59,18 @@ def nextEpisode(parsedData,formatWidth=2):
         lastSeason += 1
     return "S{seasons:0{width}d}E{episodes:0{width}d}".format(seasons=lastSeason,episodes=parsedData[lastSeason-1][0]+1,width=formatWidth)
 
-def getWatchedAll(parsedData):
-    watched=0
-    all=0
-    for line in parsedData:
-        watched+=int(line[0])
-        all+=int(line[1])
-    return [watched,all]
 
 def getPercentage(part,whole):
     return round(part*1000//whole)/10
 
 
-def parseData(data):
-    # [
-    #         [watched, all],
-    #         [watched, all]
-    # ]
-    return [[int(s) for s in line.split("%:%") ] for line in data.splitlines()]
 
 def printParsed(parsedData,nameOrIndex=""):
     if nameOrIndex:
         print(getName(nameOrIndex)+":")
     for i,line in enumerate(parsedData):
-        if line[0]!=line[1]:
+        if line[0]!=line[1] or "-x" in args:
             print(f"Season {i+1}: {line[0]}/{line[1]}")
-            if not "-x" in args: break
     watchedAll = getWatchedAll(parsedData)
     print(f"Episodes: {watchedAll[1]}")
     print(f"Progress: {getPercentage(*watchedAll)}%")
