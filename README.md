@@ -1,3 +1,6 @@
+# Important notice
+I won't maintain this project any longer, because the code base grow into just pure bad code. I started coding this using cpp, the repo is private for now but it will be public some sunny day. the repo will be [nimaaskarian/bingewatcher-cpp](https://github.com/nimaaskarian/bingewatcher-cpp).  
+You can ofc write this program yourself (even with bash, but I don't recommend you doing that), its simple and fun.
 # Bingewatcher
 A script, making the life of binge-watchers/multitaskers easier. Keeps track of series -- or anything else with a lot of episodes, like tutorials -- that you watching with a couple of files.
 
