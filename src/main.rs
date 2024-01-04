@@ -80,7 +80,6 @@ fn main() -> io::Result<()>{
 
     if selected_indexes.is_empty() {
         for (index, serie) in (&series).into_iter().enumerate() {
-            // println!("{index}: {}", &serie.display());
             print!("{index}: ");
             serie.print(&print_type);
         }

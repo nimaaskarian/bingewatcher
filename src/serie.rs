@@ -203,11 +203,10 @@ impl Serie {
         if let Some(mut index) = season_index {
             loop {
                 unwatch_count = self.seasons[index].unwatch(unwatch_count);
-                if unwatch_count > 0 && index != 0 {
-                    index-=1;
-                } else {
+                if unwatch_count == 0 || index == 0 {
                     break;
-                }
+                } 
+                index-=1;
             }
             self.current_season_index = Some(index);
         }
@@ -222,13 +221,12 @@ impl Serie {
         if let Some(mut index) = season_index {
             loop {
                 watch_count = self.seasons[index].watch(watch_count);
-                if watch_count > 0 && index+1 < self.seasons.len() {
-                    index+=1;
-                    self.current_season_index = Some(index);
-                } else {
+                if watch_count == 0 || index+1 >= self.seasons.len() {
                     break;
-                }
+                } 
+                index+=1;
             }
+            self.current_season_index = Some(index);
             if self.current_season().unwrap().is_finished() {
                 self.current_season_index = None;
             }
@@ -322,7 +320,9 @@ mod tests {
     #[test]
     pub fn test_watch() {
         let mut test = get_test_serie();
-        test.watch(20);
+        test.watch(9);
+        assert_eq!(test.current_season_index.unwrap(), 0);
+        test.watch(11);
         assert_eq!(test.episodes(), 40);
         assert_eq!(test.watched(), 30);
         assert_eq!(test.seasons[0].watched, 20);
@@ -330,6 +330,8 @@ mod tests {
         assert_eq!(test.current_season_index.unwrap(), 1);
         let left = test.watch(20);
         assert_eq!(left, 10);
+        let left = test.watch(20);
+        assert_eq!(left, 20);
         assert_eq!(test.seasons[1].watched, 20);
         assert_eq!(test.current_season_index, None);
     }
