@@ -1,8 +1,8 @@
 use scanf::sscanf;
 
 pub struct Season {
-    pub episodes: u32,
-    pub watched: u32,
+    pub episodes: usize,
+    pub watched: usize,
 }
 
 impl TryFrom<&str> for Season {
@@ -10,8 +10,8 @@ impl TryFrom<&str> for Season {
 
     #[inline]
     fn try_from(value: &str) -> Result<Self, Self::Error> {
-        let mut episodes:u32 = 0;
-        let mut watched:u32 = 0;
+        let mut episodes:usize = 0;
+        let mut watched:usize = 0;
         if sscanf!(value, "{}+{}", watched, episodes).is_err() {
             Err("Unable to read season")
         } else {
@@ -30,7 +30,7 @@ impl Into<String> for &Season {
 
 impl Season {
     #[inline]
-    pub fn new (episodes:u32) -> Self {
+    pub fn new (episodes:usize) -> Self {
         Season {
             episodes,
             watched: 0,
@@ -38,7 +38,7 @@ impl Season {
     }
 
     #[inline]
-    pub fn not_watched(&self) -> u32 {
+    pub fn not_watched(&self) -> usize {
         self.episodes - self.watched
     }
 
@@ -53,14 +53,14 @@ impl Season {
     }
 
     #[inline]
-    pub fn watch(&mut self, count:u32) -> u32 {
+    pub fn watch(&mut self, count:usize) -> usize {
         let watch_count = count.min(self.not_watched());
         self.watched += watch_count;
         count - watch_count
     }
 
     #[inline]
-    pub fn unwatch(&mut self, count:u32) -> u32 {
+    pub fn unwatch(&mut self, count:usize) -> usize {
         let unwatch_count = count.min(self.watched);
         self.watched -= unwatch_count;
         count - unwatch_count

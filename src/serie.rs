@@ -8,15 +8,16 @@ pub enum SeriePrint {
     Normal,
     Extended,
     NextEpisode,
+    Season,
 }
 pub struct Serie {
     seasons: Vec<Season>,
-    name: String,
+    pub name: String,
     current_season_index: Option<usize>,
 }
 
 #[inline(always)]
-fn digit_count(mut number: u32) -> usize {
+fn digit_count(mut number: usize) -> usize {
     let mut count = 0;
 
     while number != 0 {
@@ -80,8 +81,9 @@ impl Serie {
     pub fn print(&self, print:&SeriePrint) {
         match print {
             SeriePrint::Extended => println!("{}", self.extended()),
-            SeriePrint::NextEpisode => println!("{}", self.next_episode()),
+            SeriePrint::NextEpisode => println!("{}", self.next_episode_str()),
             SeriePrint::Normal => println!("{}", self.display()),
+            SeriePrint::Season => println!("{}", self.next_season()),
         }
     } 
 
@@ -132,7 +134,7 @@ impl Serie {
     }
     
     #[inline]
-    pub fn finished(&self) -> bool{
+    pub fn is_finished(&self) -> bool{
         self.watched() == self.episodes()
     }
 
@@ -152,9 +154,22 @@ impl Serie {
     }
 
     #[inline]
-    pub fn next_episode(&self) -> String {
-        if self.finished() {
-            String::new()
+    pub fn next_season(&self) -> usize {
+        self.current_season_index.unwrap()+1
+    }
+
+    #[inline]
+    pub fn next_episode(&self) -> usize {
+        match self.current_season() {
+            Some(season) => season.watched+1,
+            None => 1
+        }
+    }
+
+    #[inline]
+    pub fn next_episode_str(&self) -> String {
+        if self.is_finished() {
+            String::from("FINISHED")
         } else {
             match self.current_season() {
                 None => String::new(),
@@ -163,11 +178,11 @@ impl Serie {
                         0 | 1 => 2,
                         any => any,
                     };
-                    let season_width = match digit_count(self.seasons.len() as u32) {
+                    let season_width = match digit_count(self.seasons.len()) {
                         0 | 1 => 2,
                         any => any,
                     };
-                    format!("S{:0season_width$}E{:0episode_width$}",self.current_season_index.unwrap()+1,season.watched+1)
+                    format!("S{:0season_width$}E{:0episode_width$}",self.next_season(),season.watched+1)
                 }
             }
         }
@@ -183,12 +198,18 @@ impl Serie {
 
     #[inline]
     pub fn display(&self) -> String {
-        format!("{} {:.2}%", self.name, self.watched_percentage())
+        format!("{} {}", self.name, self.next_episode_str())
+    }
+
+    pub fn three_line_display(&self) -> String {
+        format!("Name: {}
+Percentage: {:.2}%
+Next episode: {}\n", self.name, self.watched_percentage(), self.next_episode_str())
     }
 
     #[inline]
     pub fn extended(&self) -> String {
-        format!("{} {:.2}%\n", self.name, self.watched_percentage())
+        self.three_line_display()
         + (&self.seasons).into_iter()
         .map(|season| season.display())
         .collect::<Vec<String>>()
@@ -196,7 +217,7 @@ impl Serie {
     }
 
     #[inline]
-    pub fn unwatch(&mut self, count:u32) -> u32{
+    pub fn unwatch(&mut self, count:usize) -> usize{
         let mut unwatch_count = count;
         let season_index = self.current_season_index;
 
@@ -214,7 +235,7 @@ impl Serie {
     }
 
     #[inline]
-    pub fn watch(&mut self, count:u32) -> u32{
+    pub fn watch(&mut self, count:usize) -> usize{
         let mut watch_count = count;
         let season_index = self.current_season_index;
 
@@ -251,12 +272,12 @@ impl Serie {
     }
 
     #[inline]
-    fn watched(&self) -> u32 {
+    fn watched(&self) -> usize {
         self.seasons.iter().map(|season| season.watched).sum()
     }
 
     #[inline]
-    fn episodes(&self) -> u32 {
+    fn episodes(&self) -> usize {
         self.seasons.iter().map(|season| season.episodes).sum()
     }
 }
@@ -361,14 +382,14 @@ mod tests {
     pub fn test_next_episode() {
         let mut test = get_test_serie();
         let expected = "S01E11";
-        assert_eq!(test.next_episode(), expected);
+        assert_eq!(test.next_episode_str(), expected);
 
         test.unwatch(6);
         let expected = "S01E05";
-        assert_eq!(test.next_episode(), expected);
+        assert_eq!(test.next_episode_str(), expected);
 
         test.watch(6);
         let expected = "S01E11";
-        assert_eq!(test.next_episode(), expected);
+        assert_eq!(test.next_episode_str(), expected);
     }
 }
