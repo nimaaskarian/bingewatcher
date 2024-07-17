@@ -1,5 +1,6 @@
 use scanf::sscanf;
 
+#[derive(Debug)]
 pub struct Season {
     pub episodes: usize,
     pub watched: usize,

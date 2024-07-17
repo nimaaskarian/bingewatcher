@@ -2,7 +2,7 @@ mod season;
 // use std::{path::PathBuf, fs, io};
 use std::{path::PathBuf, io::{self, Write}, fs::{self, File}};
 
-use season::Season;
+pub use season::Season;
 
 pub enum SeriePrint {
     Normal,
@@ -10,6 +10,8 @@ pub enum SeriePrint {
     NextEpisode,
     Season,
 }
+
+#[derive(Debug)]
 pub struct Serie {
     seasons: Vec<Season>,
     pub name: String,

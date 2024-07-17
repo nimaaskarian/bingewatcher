@@ -2,8 +2,8 @@ mod serie;
 mod onlineserie;
 
 use scanf::scanf;
-use onlineserie::request;
-use std::{path::PathBuf, io::{self, Write}, fs::{self, File, remove_file}};
+use onlineserie::{online_tv_show, request_detail};
+use std::{fs::{self, remove_file}, io, path::PathBuf, process::exit};
 use serie::{Serie, SeriePrint};
 use clap::Parser;
 
@@ -37,21 +37,25 @@ struct Args {
     #[arg(short='e', long, default_value_t=false)]
     episode: bool,
 
-    /// Show next episode when printing
+    /// Delete selected series
     #[arg(short, long, default_value_t=false)]
     delete: bool,
 
-    /// Show next episode when printing
+    /// Delete selected series without asking for confirmation
     #[arg(short='D', long, default_value_t=false)]
     delete_noask: bool,
 
-    /// Show next episode when printing
+    /// Print current season of selected series
     #[arg(short='S', long, default_value_t=false)]
     print_season: bool,
 
     /// Add an series from episodate API (needs internet)
     #[arg(short='o', long, default_value_t=String::new())]
     add_online: String,
+
+    /// Search series from episodate API (needs internet)
+    #[arg(short='O', long, default_value_t=String::new())]
+    search_online: String,
 
     /// Show finished too
     #[arg(short, long, default_value_t=false)]
@@ -91,11 +95,14 @@ fn print_watched_count(watch: usize, unwatch:usize, name:&String) {
     }
 }
 
-fn main() -> io::Result<()> {
+#[tokio::main]
+async fn main() -> io::Result<()> {
     let args = Args::parse();
-    if !args.add_online.is_empty() {
-        request(args.add_online);
+    if !args.search_online.is_empty() {
+        let _ = online_tv_show(args.search_online).await;
+        return Ok(())
     }
+
     let dir = append_home_dir(".cache/bingewatcher");
     let mut series:Vec<Serie> = read_dir_for_series(&dir)?;
 
@@ -107,6 +114,12 @@ fn main() -> io::Result<()> {
     }
 
     let mut selected_indexes: Vec<usize> = args.indexes;
+    if !args.add_online.is_empty() {
+        if let Some(serie) = request_detail(args.add_online).await.ok() {
+            series.push(serie);
+            selected_indexes.push(series.len()-1);
+        }
+    }
 
     match args.search {
         Some(search) => {
