@@ -1,8 +1,7 @@
-use std::{fmt::Display, io::{stdout, Write}, time::Duration};
+use std::{fmt::Display, io::{stdout, Write}};
 use reqwest;
 use serde::{Deserialize, Serialize};
 use error_chain::error_chain;
-// use json::{self, JsonValue};
 use serde_json::{self, Value};
 
 use crate::serie::{Serie, Season};

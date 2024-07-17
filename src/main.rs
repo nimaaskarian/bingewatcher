@@ -3,7 +3,7 @@ mod onlineserie;
 
 use scanf::scanf;
 use onlineserie::{online_tv_show, request_detail};
-use std::{fs::{self, remove_file}, io, path::PathBuf, process::exit};
+use std::{fs::{self, remove_file}, io, path::PathBuf};
 use serie::{Serie, SeriePrint};
 use clap::Parser;
 
