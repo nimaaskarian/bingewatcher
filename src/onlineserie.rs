@@ -1,5 +1,4 @@
 use error_chain::error_chain;
-use reqwest;
 use serde::{Deserialize, Serialize};
 use serde_json::{self, Value};
 use std::{
@@ -27,7 +26,7 @@ pub struct Response {
 impl Display for Response {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         for tv_show in &self.tv_shows {
-            write!(f, "{tv_show}\n")?
+            writeln!(f, "{tv_show}")?
         }
         Ok(())
     }

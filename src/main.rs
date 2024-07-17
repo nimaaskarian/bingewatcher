@@ -8,7 +8,7 @@ use serie::{Serie, SeriePrint};
 use std::{
     fs::{self, remove_file},
     io,
-    path::PathBuf,
+    path::{Path, PathBuf},
 };
 
 use home::home_dir;
@@ -75,22 +75,21 @@ struct Args {
 }
 
 #[inline]
-fn read_dir_for_series(dir: &PathBuf) -> io::Result<Vec<Serie>> {
+fn read_dir_for_series(dir: &Path) -> io::Result<Vec<Serie>> {
     let mut series: Vec<Serie> = vec![];
 
     std::fs::create_dir_all(dir)?;
 
     for entry in fs::read_dir(dir)? {
-        match Serie::from_file(&entry?.path()) {
-            Some(serie) => series.push(serie),
-            None => {}
+        if let Some(serie) = Serie::from_file(&entry?.path()) {
+            series.push(serie)
         }
     }
     Ok(series)
 }
 
 #[inline]
-fn print_watched_count(watch: usize, unwatch: usize, name: &String) {
+fn print_watched_count(watch: usize, unwatch: usize, name: &str) {
     let watched_count: isize = watch as isize - unwatch as isize;
     match watched_count {
         ..=-1 => println!("Unwatched {} episode(s) from {name}.", -watched_count),
@@ -111,39 +110,30 @@ async fn main() -> io::Result<()> {
     let mut series: Vec<Serie> = read_dir_for_series(&dir)?;
 
     if args.only_finished {
-        series = series
-            .into_iter()
-            .filter(|serie| serie.is_finished())
-            .collect()
+        series.retain(|serie| serie.is_finished())
     } else if !args.finished {
-        series = series
-            .into_iter()
-            .filter(|serie| !serie.is_finished())
-            .collect()
+        series.retain(|serie| !serie.is_finished())
     }
 
     let mut selected_indexes: Vec<usize> = args.indexes;
     if !args.add_online.is_empty() {
-        if let Some(serie) = request_detail(args.add_online).await.ok() {
+        if let Ok(serie) = request_detail(args.add_online).await {
             series.push(serie);
             selected_indexes.push(series.len() - 1);
         }
     }
 
-    match args.search {
-        Some(search) => {
-            let mut not_found = true;
-            for (index, serie) in (&series).into_iter().enumerate() {
-                if serie.matches(&search) {
-                    selected_indexes.push(index);
-                    not_found = false;
-                }
-            }
-            if not_found {
-                println!("Error: search with query \"{}\" had no results.", search);
+    if let Some(search) = args.search {
+        let mut not_found = true;
+        for (index, serie) in series.iter().enumerate() {
+            if serie.matches(&search) {
+                selected_indexes.push(index);
+                not_found = false;
             }
         }
-        _ => {}
+        if not_found {
+            eprintln!("Error: search with query \"{}\" had no results.", search);
+        }
     }
     let print_type = if args.print_season {
         SeriePrint::Season
@@ -178,7 +168,7 @@ async fn main() -> io::Result<()> {
     }
 
     if selected_indexes.is_empty() {
-        for (index, serie) in (&series).into_iter().enumerate() {
+        for (index, serie) in series.iter().enumerate() {
             print!("{index}: ");
             serie.print(&print_type);
         }

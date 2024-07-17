@@ -21,10 +21,10 @@ impl TryFrom<&str> for Season {
     }
 }
 
-impl Into<String> for &Season {
+impl From<&Season> for String {
     #[inline]
-    fn into(self) -> String {
-        format!("{}+{}", self.watched, self.episodes)
+    fn from(season: &Season) -> String {
+        format!("{}+{}", season.watched, season.episodes)
     }
 }
 
@@ -40,11 +40,6 @@ impl Season {
     #[inline]
     pub fn not_watched(&self) -> usize {
         self.episodes - self.watched
-    }
-
-    #[inline]
-    pub fn into_string(&self) -> String {
-        self.into()
     }
 
     #[inline]

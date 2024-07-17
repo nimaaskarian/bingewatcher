@@ -1,9 +1,8 @@
 mod season;
-// use std::{path::PathBuf, fs, io};
 use std::{
     fs::{self, File},
     io::{self, Write},
-    path::PathBuf,
+    path::Path,
     str::FromStr,
 };
 
@@ -37,11 +36,11 @@ fn number_width(mut number: usize) -> usize {
     }
 }
 
-impl Into<String> for &Serie {
-    fn into(self) -> String {
-        (&self.seasons)
-            .into_iter()
-            .map(|season| season.into_string())
+impl From<&Serie> for String {
+    fn from(serie: &Serie) -> String {
+        serie.seasons
+            .iter()
+            .map(|season| season.into())
             .collect::<Vec<String>>()
             .join("\n")
     }
@@ -96,26 +95,22 @@ impl Serie {
     }
 
     #[inline]
-    pub fn to_string(&self) -> String {
-        self.into()
-    }
-
-    #[inline]
-    pub fn write(&self, path: &PathBuf) -> io::Result<()> {
+    pub fn write(&self, path: &Path) -> io::Result<()> {
         let mut file = File::create(path)?;
-        write!(file, "{}", self.to_string())?;
+        let self_str: String = self.into();
+        write!(file, "{}", self_str)?;
         Ok(())
     }
 
     #[inline]
-    pub fn write_in_dir(&self, dir: &PathBuf) -> io::Result<()> {
-        let path = (&dir).join(self.filename());
+    pub fn write_in_dir(&self, dir: &Path) -> io::Result<()> {
+        let path = dir.join(self.filename());
         self.write(&path)?;
         Ok(())
     }
 
     #[inline]
-    pub fn from_file(path: &PathBuf) -> Option<Self> {
+    pub fn from_file(path: &Path) -> Option<Self> {
         let file_content = fs::read_to_string(path).ok()?;
 
         let serie = file_content.parse::<Self>().ok()?;
@@ -126,12 +121,12 @@ impl Serie {
     }
 
     #[inline]
-    pub fn matches(&self, search: &String) -> bool {
+    pub fn matches(&self, search: &str) -> bool {
         self.name.to_lowercase().contains(&search.to_lowercase())
     }
 
     #[inline]
-    pub fn exact_matches(&self, search: &String) -> bool {
+    pub fn exact_matches(&self, search: &str) -> bool {
         self.name.to_lowercase() == search.to_lowercase()
     }
 
@@ -141,13 +136,13 @@ impl Serie {
     }
 
     #[inline]
-    fn get_current_season_index(seasons: &Vec<Season>) -> Option<usize> {
-        for (index, season) in seasons.into_iter().enumerate() {
+    fn get_current_season_index(seasons: &[Season]) -> Option<usize> {
+        for (index, season) in seasons.iter().enumerate() {
             if !season.is_finished() {
                 return Some(index);
             }
         }
-        return None;
+        None
     }
 
     #[inline]
@@ -213,8 +208,8 @@ Next episode: {}\n",
     #[inline]
     pub fn extended(&self) -> String {
         self.three_line_display()
-            + (&self.seasons)
-                .into_iter()
+            + self.seasons
+                .iter()
                 .map(|season| season.display())
                 .collect::<Vec<String>>()
                 .join("\n")
@@ -237,7 +232,7 @@ Next episode: {}\n",
             }
             self.current_season_index = Some(index);
         }
-        return unwatch_count;
+        unwatch_count
     }
 
     #[inline]
@@ -258,7 +253,7 @@ Next episode: {}\n",
                 self.current_season_index = None;
             }
         }
-        return watch_count;
+        watch_count
     }
 
     #[inline]
