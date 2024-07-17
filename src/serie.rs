@@ -1,6 +1,6 @@
 mod season;
 // use std::{path::PathBuf, fs, io};
-use std::{path::PathBuf, io::{self, Write}, fs::{self, File}};
+use std::{fs::{self, File}, io::{self, Write}, path::PathBuf, str::FromStr};
 
 pub use season::Season;
 
@@ -19,15 +19,17 @@ pub struct Serie {
 }
 
 #[inline(always)]
-fn digit_count(mut number: usize) -> usize {
+fn number_width(mut number: usize) -> usize {
     let mut count = 0;
 
     while number != 0 {
         number /= 10;
         count += 1;
     }
-
-    count
+    match count {
+        0 | 1 => 2,
+        any => any,
+    }
 }
 
 impl Into<String> for &Serie {
@@ -39,29 +41,28 @@ impl Into<String> for &Serie {
     }
 }
 
-impl TryFrom<&str> for Serie {
-    type Error = &'static str;
+#[derive(Debug)]
+pub enum SerieParseError {
+    EmptyFile,
+    ParseFailed,
+}
 
-    fn try_from(value: &str) -> Result<Self, Self::Error> {
+impl FromStr for Serie {
+    type Err = SerieParseError;
+
+    fn from_str(value: &str) -> Result<Self, Self::Err> {
         let mut seasons = vec![];
         for line in value.to_string().lines() {
             match Season::try_from(line) {
-                Err(_) => return Err("Unable to create serie from string"),
+                Err(_) => return Err(SerieParseError::ParseFailed),
                 Ok(season) => seasons.push(season),
             }
         }
         if seasons.is_empty() {
-            return Err("Empty file")
+            return Err(SerieParseError::EmptyFile)
         }
         Ok(Serie::new(seasons, ""))
-    }
-}
-
-impl TryFrom<String> for Serie {
-    type Error = &'static str;
-
-    fn try_from(value: String) -> Result<Self, Self::Error> {
-        Self::try_from(value.as_str())
+        
     }
 }
 
@@ -110,19 +111,13 @@ impl Serie {
 
     #[inline]
     pub fn from_file(path:&PathBuf) -> Option<Self>{
-        let file_content = match fs::read_to_string(path) {
-            Err(_) => return None,
-            Ok(content) => content,
-        };
+        let file_content = fs::read_to_string(path).ok()?;
 
-        match Self::try_from(file_content) {
-            Ok(mut serie)=>{
-                serie.name = path.file_stem().unwrap().to_str().unwrap().to_string();
-
-                return Some(serie)
-            },
-            Err(_)=>return None,
-        }
+        let serie = file_content.parse::<Self>().ok()?;
+        Some(Self {
+            name: path.file_stem().unwrap().to_str().unwrap().to_string(),
+            ..serie
+        })
     }
 
     #[inline]
@@ -176,14 +171,8 @@ impl Serie {
             match self.current_season() {
                 None => String::new(),
                 Some(season) => {
-                    let episode_width = match digit_count(season.episodes) {
-                        0 | 1 => 2,
-                        any => any,
-                    };
-                    let season_width = match digit_count(self.seasons.len()) {
-                        0 | 1 => 2,
-                        any => any,
-                    };
+                    let episode_width = number_width(season.episodes);
+                    let season_width = number_width(self.seasons.len());
                     format!("S{:0season_width$}E{:0episode_width$}",self.next_season(),season.watched+1)
                 }
             }
@@ -192,10 +181,8 @@ impl Serie {
 
     #[inline]
     pub fn current_season(&self) -> Option<&Season> {
-        match self.current_season_index {
-            Some(index) => Some(&self.seasons[index]),
-            None=>None
-        }
+        let index = self.current_season_index?;
+        Some(&self.seasons[index])
     }
 
     #[inline]
@@ -287,9 +274,9 @@ Next episode: {}\n", self.name, self.watched_percentage(), self.next_episode_str
 mod tests {
     use super::*;
 
-    fn get_test_serie() -> Serie{
-                Serie::try_from("10+20
-0+20").unwrap()
+    fn get_test_serie() -> Serie {
+                "10+20
+0+20".parse().unwrap()
 
     }
 
