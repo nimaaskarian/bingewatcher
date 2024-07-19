@@ -1,4 +1,4 @@
-use scanf::sscanf;
+use std::str::FromStr;
 
 #[derive(Debug)]
 pub struct Season {
@@ -6,18 +6,23 @@ pub struct Season {
     pub watched: usize,
 }
 
-impl TryFrom<&str> for Season {
-    type Error = &'static str;
+pub struct MalformedSeason;
 
-    #[inline]
-    fn try_from(value: &str) -> Result<Self, Self::Error> {
-        let mut episodes: usize = 0;
-        let mut watched: usize = 0;
-        if sscanf!(value, "{}+{}", watched, episodes).is_err() {
-            Err("Unable to read season")
-        } else {
-            Ok(Season { watched, episodes })
+impl FromStr for Season {
+    type Err = MalformedSeason;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let plus_index = s.chars().position(|c| c == '+');
+        if let Some(index) = plus_index {
+            let watched = s[..index].parse();
+            let episodes = s[index+1..].parse();
+            if let (Ok(watched), Ok(episodes)) = (watched, episodes) {
+                return Ok(Self {
+                    episodes,
+                    watched,
+                })
+            }
         }
+        Err(MalformedSeason)
     }
 }
 

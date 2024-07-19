@@ -58,7 +58,7 @@ impl FromStr for Serie {
     fn from_str(value: &str) -> Result<Self, Self::Err> {
         let mut seasons = vec![];
         for line in value.to_string().lines() {
-            match Season::try_from(line) {
+            match line.parse() {
                 Err(_) => return Err(SerieParseError::ParseFailed),
                 Ok(season) => seasons.push(season),
             }

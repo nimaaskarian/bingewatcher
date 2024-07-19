@@ -3,12 +3,9 @@ mod serie;
 
 use clap::Parser;
 use onlineserie::{online_tv_show, request_detail};
-use scanf::scanf;
 use serie::{Serie, SeriePrint};
 use std::{
-    fs::{self, remove_file},
-    io,
-    path::{Path, PathBuf},
+    fs::{self, remove_file}, io, path::{Path, PathBuf}
 };
 
 use home::home_dir;
@@ -154,12 +151,12 @@ async fn main() -> io::Result<()> {
         current_serie.print(&print_type);
         current_serie.write_in_dir(&dir)?;
         if args.delete || args.delete_noask {
-            let mut ch = 'y';
+            let mut input = String::from("y");
             if !args.delete_noask {
                 print!("Do you want to delete \"{}\" [Y/n] ", current_serie.name);
-                let _ = scanf!("{}", ch);
+                io::stdin().read_line(&mut input)?;
             }
-            if ch != 'n' {
+            if input.trim() != "n" {
                 let path = &dir.join(&current_serie.filename());
                 remove_file(path)?;
                 println!("Deleted {}", path.to_str().unwrap());
