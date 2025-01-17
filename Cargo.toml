@@ -1,5 +1,5 @@
 [package]
-name = "bingewatcher"
+name = "bw"
 version = "0.1.0"
 edition = "2021"
 
@@ -7,6 +7,7 @@ edition = "2021"
 
 [dependencies]
 clap = { version = "4.4.12", features = ["derive"] }
+clap_complete = "4.5.9"
 error-chain = "0.12.4"
 home = "0.5.9"
 reqwest = { version = "0.11.23", features = ["gzip", "brotli", "h3","multipart"]}

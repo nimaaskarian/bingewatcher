@@ -6,13 +6,16 @@ use std::{
     str::FromStr,
 };
 
+use clap::ValueEnum;
 pub use season::Season;
 
+#[derive(Debug, Clone, ValueEnum)]
 pub enum SeriePrint {
     Normal,
     Extended,
     NextEpisode,
     Season,
+    Episode,
 }
 
 #[derive(Debug)]
@@ -91,6 +94,7 @@ impl Serie {
             SeriePrint::NextEpisode => println!("{}", self.next_episode_str()),
             SeriePrint::Normal => println!("{}", self.display()),
             SeriePrint::Season => println!("{}", self.next_season()),
+            SeriePrint::Episode => println!("{}", self.next_episode()),
         }
     }
 

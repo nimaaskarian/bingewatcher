@@ -1,7 +1,8 @@
 mod onlineserie;
 mod serie;
 
-use clap::Parser;
+use clap::{Command, CommandFactory, Parser};
+use clap_complete::{generate, Generator, Shell};
 use onlineserie::{online_tv_show, request_detail};
 use serie::{Serie, SeriePrint};
 use std::{
@@ -34,6 +35,9 @@ struct Args {
     #[arg(short = 'E', long, default_value_t = false)]
     extended: bool,
 
+    #[arg(short='c', long)]
+    completion: Option<Shell>,
+
     /// Show next episode when printing
     #[arg(short = 'e', long, default_value_t = false)]
     episode: bool,
@@ -47,8 +51,8 @@ struct Args {
     delete_noask: bool,
 
     /// Print current season of selected series
-    #[arg(short = 'S', long, default_value_t = false)]
-    print_season: bool,
+    #[arg(short = 'p', long, default_value="normal")]
+    print_mode: SeriePrint,
 
     /// Add an series from episodate API (needs internet)
     #[arg(short='o', long, default_value_t=String::new())]
@@ -95,9 +99,18 @@ fn print_watched_count(watch: usize, unwatch: usize, name: &str) {
     }
 }
 
+fn print_completions<G: Generator>(gen: G, cmd: &mut Command) {
+    generate(gen, cmd, cmd.get_name().to_string(), &mut io::stdout());
+}
+
 #[tokio::main]
 async fn main() -> io::Result<()> {
     let args = Args::parse();
+    if let Some(generator) = args.completion {
+        print_completions(generator, &mut Args::command());
+        return Ok(())
+    }
+
     if !args.search_online.is_empty() {
         let _ = online_tv_show(args.search_online).await;
         return Ok(());
@@ -132,23 +145,14 @@ async fn main() -> io::Result<()> {
             eprintln!("Error: search with query \"{}\" had no results.", search);
         }
     }
-    let print_type = if args.print_season {
-        SeriePrint::Season
-    } else if args.extended {
-        SeriePrint::Extended
-    } else if args.episode {
-        SeriePrint::NextEpisode
-    } else {
-        SeriePrint::Normal
-    };
 
-    for index in &selected_indexes {
-        let current_serie = &mut series[*index];
+    for &index in &selected_indexes {
+        let current_serie = &mut series[index];
         current_serie.watch(args.watch);
         current_serie.unwatch(args.unwatch);
         print_watched_count(args.watch, args.unwatch, &current_serie.name);
 
-        current_serie.print(&print_type);
+        current_serie.print(&args.print_mode);
         current_serie.write_in_dir(&dir)?;
         if args.delete || args.delete_noask {
             let mut input = String::from("y");
@@ -167,7 +171,7 @@ async fn main() -> io::Result<()> {
     if selected_indexes.is_empty() {
         for (index, serie) in series.iter().enumerate() {
             print!("{index}: ");
-            serie.print(&print_type);
+            serie.print(&args.print_mode);
         }
     }
     Ok(())
