@@ -6,7 +6,7 @@ use clap_complete::{generate, Generator, Shell};
 use onlineserie::{online_tv_show, request_detail};
 use serie::{Serie, SeriePrint};
 use std::{
-    fs::{self, remove_file}, io, path::{Path, PathBuf}
+    process, fs, io, path::{Path, PathBuf}
 };
 
 use home::home_dir;
@@ -142,7 +142,8 @@ async fn main() -> io::Result<()> {
             }
         }
         if not_found {
-            eprintln!("Error: search with query \"{}\" had no results.", search);
+            eprintln!("ERROR: search with query \"{}\" had no results.", search);
+            process::exit(1);
         }
     }
 
@@ -162,7 +163,7 @@ async fn main() -> io::Result<()> {
             }
             if input.trim() != "n" {
                 let path = &dir.join(&current_serie.filename());
-                remove_file(path)?;
+                fs::remove_file(path)?;
                 println!("Deleted {}", path.to_str().unwrap());
             }
         }
