@@ -23,5 +23,9 @@ prints the next episode you need to watch in S0xE0y format, ex: S01E01), and
 mpv $(fd . path/to/breaking-bad $(bw -s "breaking bad" --print-mode next-episode)) && bw -s "breaking bad" -a 1
 ```
 
+# the name?
+comes from the fact that you can have some command in your history to watch your
+favorite show with the same command in a row, and binge-watch it.
+
 # why not a database? like sqlite?
 are you insane? that kind of overhead for something that simple?
