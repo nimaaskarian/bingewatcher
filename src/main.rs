@@ -58,6 +58,10 @@ struct Args {
     #[arg(short='o', long, default_value_t=String::new())]
     add_online: String,
 
+    /// Show details of a series from episodate API (needs internet)
+    #[arg(long, default_value_t=String::new())]
+    detail_online: String,
+
     /// Search series from episodate API (needs internet)
     #[arg(short='O', long, default_value_t=String::new())]
     search_online: String,
@@ -128,8 +132,18 @@ async fn main() -> io::Result<()> {
     let mut selected_indexes: Vec<usize> = args.indexes;
     if !args.add_online.is_empty() {
         if let Ok(serie) = request_detail(args.add_online).await {
+            if series.iter().any(|s| s.name == serie.name)  {
+                eprintln!("The serie \"{}\" already exists.", serie.name);
+                process::exit(1);
+            }
             series.push(serie);
             selected_indexes.push(series.len() - 1);
+        }
+    }
+    if !args.detail_online.is_empty() {
+        if let Ok(serie) = request_detail(args.detail_online).await {
+            serie.print(&SeriePrint::Extended);
+            process::exit(0);
         }
     }
 
