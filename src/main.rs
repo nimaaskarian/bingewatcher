@@ -6,14 +6,18 @@ use clap_complete::{generate, Generator, Shell};
 use onlineserie::{online_tv_show, request_detail};
 use serie::{Serie, SeriePrint};
 use std::{
-    process, fs, io, path::{Path, PathBuf}
+    borrow::Borrow, cell::RefCell, fs, io, path::{Path, PathBuf}, process, rc::Rc
 };
 
 use home::home_dir;
 
 #[inline(always)]
-pub fn append_home_dir(str: &str) -> PathBuf {
-    PathBuf::from(format!("{}/{}", home_dir().unwrap().to_str().unwrap(), str))
+pub fn append_home_dir(strs: &[&str]) -> PathBuf {
+    let mut out = home_dir().unwrap();
+    for str in strs {
+        out.push(str);
+    }
+    out
 }
 
 #[derive(Parser, Debug)]
@@ -79,18 +83,80 @@ struct Args {
     indexes: Vec<usize>,
 }
 
-#[inline]
-fn read_dir_for_series(dir: &Path) -> io::Result<Vec<Serie>> {
-    let mut series: Vec<Serie> = vec![];
+impl Args {
+    async fn app_mode(&mut self) -> AppMode {
+        if let Some(generator) = self.completion {
+            return AppMode::PrintCompletions(generator);
+        }
+        if !self.search_online.is_empty() {
+            return AppMode::SearchOnline
+        }
+        if !self.detail_online.is_empty() {
+            return AppMode::DetailOnline
+        }
+        let dir = append_home_dir(&[".cache", "bingewatcher"]);
+        let mut series: Vec<Serie> = if self.only_finished {
+            read_dir_for_series(&dir,Some(Serie::is_finished))
+        } else if !self.finished {
+            read_dir_for_series(&dir,Some(Serie::is_not_finished))
+        } else {
+            read_dir_for_series(&dir,None)
+        };
+        if !self.add_online.is_empty() {
+            if let Ok(serie) = request_detail(&self.add_online).await {
+                if series.iter().any(|s| s.name == serie.name)  {
+                    eprintln!("The serie \"{}\" already exists.", serie.name);
+                    process::exit(1);
+                }
+                self.indexes.push(series.len());
+                series.push(serie);
+            }
+        }
+        if let Some(search) = self.search.as_ref() {
+            if let Some(index) = series.iter().position(|serie| serie.matches(search)) {
+                self.indexes.push(index);
+            } else {
+                eprintln!("ERROR: search with query \"{}\" had no results.", search);
+                process::exit(1);
+            }
+        }
+        if !self.indexes.is_empty() {
+            return AppMode::ManipulateSeries(RefCell::new(series), RefCell::new(dir));
+        } else {
+            self.list_series(&series);
+        }
+        AppMode::Nothing
+    }
 
-    std::fs::create_dir_all(dir)?;
-
-    for entry in fs::read_dir(dir)? {
-        if let Some(serie) = Serie::from_file(&entry?.path()) {
-            series.push(serie)
+    fn list_series(&self, series: &[Serie]) {
+        for (index, serie) in series.iter().enumerate() {
+            print!("{index}: ");
+            serie.print(&self.print_mode);
         }
     }
-    Ok(series)
+}
+
+enum AppMode {
+    PrintCompletions(Shell),
+    SearchOnline,
+    DetailOnline,
+    ManipulateSeries(RefCell<Vec<Serie>>, RefCell<PathBuf>),
+    Nothing,
+}
+
+#[inline]
+fn read_dir_for_series(dir: &Path, filter: Option<fn(&Serie) -> bool>) -> Vec<Serie> {
+    std::fs::create_dir_all(dir);
+    if let Ok(dir) = fs::read_dir(dir) {
+        let iter = dir.flat_map(|entry| Serie::from_file(&entry.expect("File error").path()));
+        if let Some(filter) = filter {
+            iter.filter(filter).collect()
+        } else {
+            iter.collect()
+        }
+    } else {
+        vec![]
+    }
 }
 
 #[inline]
@@ -107,87 +173,47 @@ fn print_completions<G: Generator>(gen: G, cmd: &mut Command) {
     generate(gen, cmd, cmd.get_name().to_string(), &mut io::stdout());
 }
 
+use AppMode::*;
 #[tokio::main]
 async fn main() -> io::Result<()> {
-    let args = Args::parse();
-    if let Some(generator) = args.completion {
-        print_completions(generator, &mut Args::command());
-        return Ok(())
-    }
-
-    if !args.search_online.is_empty() {
-        let _ = online_tv_show(args.search_online).await;
-        return Ok(());
-    }
-
-    let dir = append_home_dir(".cache/bingewatcher");
-    let mut series: Vec<Serie> = read_dir_for_series(&dir)?;
-
-    if args.only_finished {
-        series.retain(|serie| serie.is_finished())
-    } else if !args.finished {
-        series.retain(|serie| !serie.is_finished())
-    }
-
-    let mut selected_indexes: Vec<usize> = args.indexes;
-    if !args.add_online.is_empty() {
-        if let Ok(serie) = request_detail(args.add_online).await {
-            if series.iter().any(|s| s.name == serie.name)  {
-                eprintln!("The serie \"{}\" already exists.", serie.name);
-                process::exit(1);
-            }
-            series.push(serie);
-            selected_indexes.push(series.len() - 1);
+    let mut args = Args::parse();
+    match args.app_mode().await {
+        PrintCompletions(shell) => {
+            print_completions(shell, &mut Args::command());
         }
-    }
-    if !args.detail_online.is_empty() {
-        if let Ok(serie) = request_detail(args.detail_online).await {
-            serie.print(&SeriePrint::Extended);
-            process::exit(0);
+        SearchOnline => {
+            let _ = online_tv_show(args.search_online).await;
         }
-    }
-
-    if let Some(search) = args.search {
-        let mut not_found = true;
-        for (index, serie) in series.iter().enumerate() {
-            if serie.matches(&search) {
-                selected_indexes.push(index);
-                not_found = false;
+        DetailOnline => {
+            if let Ok(serie) = request_detail(&args.detail_online).await {
+                serie.print(&SeriePrint::Extended);
+                process::exit(0);
             }
         }
-        if not_found {
-            eprintln!("ERROR: search with query \"{}\" had no results.", search);
-            process::exit(1);
-        }
-    }
+        ManipulateSeries(series, dir) => {
+            for index in args.indexes {
+                let current_serie = &mut series.borrow_mut()[index];
+                current_serie.watch(args.watch);
+                current_serie.unwatch(args.unwatch);
+                print_watched_count(args.watch, args.unwatch, &current_serie.name);
 
-    for &index in &selected_indexes {
-        let current_serie = &mut series[index];
-        current_serie.watch(args.watch);
-        current_serie.unwatch(args.unwatch);
-        print_watched_count(args.watch, args.unwatch, &current_serie.name);
-
-        current_serie.print(&args.print_mode);
-        current_serie.write_in_dir(&dir)?;
-        if args.delete || args.delete_noask {
-            let mut input = String::from("y");
-            if !args.delete_noask {
-                print!("Do you want to delete \"{}\" [Y/n] ", current_serie.name);
-                io::stdin().read_line(&mut input)?;
-            }
-            if input.trim() != "n" {
-                let path = &dir.join(&current_serie.filename());
-                fs::remove_file(path)?;
-                println!("Deleted {}", path.to_str().unwrap());
+                current_serie.print(&args.print_mode);
+                current_serie.write_in_dir(&dir.borrow())?;
+                if args.delete || args.delete_noask {
+                    let mut input = String::from("y");
+                    if !args.delete_noask {
+                        print!("Do you want to delete \"{}\" [Y/n] ", current_serie.name);
+                        io::stdin().read_line(&mut input)?;
+                    }
+                    if input.trim() != "n" {
+                        let path = &dir.borrow().join(&current_serie.filename());
+                        fs::remove_file(path)?;
+                        println!("Deleted {}", path.to_str().unwrap());
+                    }
+                }
             }
         }
-    }
-
-    if selected_indexes.is_empty() {
-        for (index, serie) in series.iter().enumerate() {
-            print!("{index}: ");
-            serie.print(&args.print_mode);
-        }
+        Nothing => {}
     }
     Ok(())
 }

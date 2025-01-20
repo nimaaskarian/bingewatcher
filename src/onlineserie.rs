@@ -80,7 +80,7 @@ pub struct EpisodeData {
     episode: usize,
 }
 
-pub async fn request_detail(query: String) -> Result<Serie> {
+pub async fn request_detail(query: &str) -> Result<Serie> {
     let target = format!("https://episodate.com/api/show-details?q={query}");
     let response = reqwest::get(target).await?;
     let body = response.text().await?;

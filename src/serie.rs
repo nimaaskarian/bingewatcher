@@ -140,6 +140,11 @@ impl Serie {
     }
 
     #[inline]
+    pub fn is_not_finished(&self) -> bool {
+        return !self.is_finished()
+    }
+
+    #[inline]
     fn get_current_season_index(seasons: &[Season]) -> Option<usize> {
         for (index, season) in seasons.iter().enumerate() {
             if !season.is_finished() {
