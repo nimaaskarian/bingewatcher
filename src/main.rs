@@ -128,17 +128,22 @@ impl Args {
                 println!("Unwatched {} episode(s) from {}.",current_serie.name, unwatch_count);
             }
             current_serie.print(&self.print_mode);
-            current_serie.write_in_dir(&dir);
+            current_serie.write_in_dir(&dir).expect("Write failed");
             if self.delete || self.delete_noask {
-                let mut input = String::from("y");
                 if !self.delete_noask {
+                    let mut input = String::from("y");
                     print!("Do you want to delete \"{}\" [Y/n] ", current_serie.name);
-                    io::stdout().flush();
-                    io::stdin().read_line(&mut input);
+                    io::stdout().flush().expect("Flushing stdout failed.");
+                    io::stdin().read_line(&mut input).expect("Reading input failed");
+                    if input.trim() == "n" {
+                        continue;
+                    }
                 }
-                if input.trim() != "n" {
-                    let path = &dir.join(&current_serie.filename());
-                    fs::remove_file(path);
+                let path = &dir.join(&current_serie.filename());
+                if let Err(e) = fs::remove_file(path) {
+                    println!("ERROR: Couldn't delete {}. Produced the following error:\n{}", path.to_str().unwrap(), e);
+                    process::exit(1);
+                } else {
                     println!("Deleted {}", path.to_str().unwrap());
                 }
             }
