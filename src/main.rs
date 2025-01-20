@@ -25,9 +25,6 @@ struct Args {
     /// Remove watched
     #[arg(short = 'r', long, default_value_t = 0)]
     unwatch: usize,
-    /// Extended series view, including each episode
-    #[arg(short = 'E', long, default_value_t = false)]
-    extended: bool,
     #[arg(short='c', long)]
     completion: Option<Shell>,
     /// Show next episode when printing
@@ -83,6 +80,10 @@ impl Args {
         }
         if !self.detail_online.is_empty() {
             return AppMode::DetailOnline
+        }
+        if self.update_online && self.add_online.is_empty() {
+            eprintln!("Warning: you used update-online with no add-online. Ignoring it.");
+            self.update_online = false;
         }
         let dir = utils::append_home_dir(&[".cache", "bingewatcher"]);
         let mut series: Vec<Serie> = if !self.update_online && self.only_finished {

@@ -91,7 +91,7 @@ impl Serie {
     #[inline]
     pub fn print(&self, print: &SeriePrint, dir: Option<&PathBuf>) {
         match print {
-            SeriePrint::Extended => println!("{}", self.extended()),
+            SeriePrint::Extended => self.print_extended(),
             SeriePrint::NextEpisode => println!("{}", self.next_episode_str()),
             SeriePrint::Normal => println!("{}", self.display()),
             SeriePrint::Season => println!("{}", self.next_season()),
@@ -205,27 +205,23 @@ impl Serie {
         format!("{} {}", self.name, self.next_episode_str())
     }
 
-    pub fn three_line_display(&self) -> String {
-        format!(
+    #[inline]
+    pub fn print_extended(&self) {
+        println!(
             "Name: {}
 Percentage: {:.2}%
-Next episode: {}\n",
+Next episode: {}
+Watched/Total: {}/{}
+",
             self.name,
             self.watched_percentage(),
-            self.next_episode_str()
-        )
-    }
-
-    #[inline]
-    pub fn extended(&self) -> String {
-        self.three_line_display()
-            + self.seasons
-                .iter()
-                .map(|season| season.display())
-                .collect::<Vec<String>>()
-                .join("\n")
-                .as_str()
-            + "\n"
+            self.next_episode_str(),
+            self.seasons.iter().map(|s|s.watched).sum::<usize>(),
+            self.seasons.iter().map(|s|s.episodes).sum::<usize>(),
+        );
+        for (i, season) in self.seasons.iter().enumerate() {
+            println!("{}: {}",i+1, season.display());
+        }
     }
 
     #[inline]
