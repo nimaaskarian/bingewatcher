@@ -96,7 +96,7 @@ impl Serie {
             SeriePrint::Normal => println!("{}", self.display()),
             SeriePrint::Season => println!("{}", self.next_season()),
             SeriePrint::Episode => println!("{}", self.next_episode()),
-            SeriePrint::Path => println!("{}", dir.unwrap().join(&self.filename()).to_str().unwrap()),
+            SeriePrint::Path => println!("{}", dir.unwrap().join(self.filename()).to_str().unwrap()),
         }
     }
 
@@ -143,7 +143,7 @@ impl Serie {
 
     #[inline]
     pub fn is_not_finished(&self) -> bool {
-        return !self.is_finished()
+        !self.is_finished()
     }
 
     #[inline]

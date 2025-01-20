@@ -3,7 +3,7 @@
 use clap::{CommandFactory, Parser};
 use clap_complete::Shell;
 use std::{
-    fs, io::{self, Write}, path::PathBuf, process
+    cmp::Ordering, fs, io::{self, Write}, path::PathBuf, process
 };
 
 mod utils;
@@ -129,17 +129,21 @@ impl Args {
     }
 
     #[inline]
-    fn manipulate_series(&self, series: &mut Vec<Serie>, dir: PathBuf) {
+    fn manipulate_series(&self, series: &mut [Serie], dir: PathBuf) {
         for &index in &self.indexes {
             let current_serie = &mut series[index];
-            if self.watch > self.unwatch {
-                current_serie.watch(self.watch-self.unwatch);
-                let watched_count = self.watch-self.unwatch;
-                println!("Watched {watched_count} episode(s) from {}.", current_serie.name);
-            } else if self.watch < self.unwatch {
-                let unwatch_count = self.unwatch-self.watch;
-                current_serie.unwatch(unwatch_count);
-                println!("Unwatched {} episode(s) from {}.",current_serie.name, unwatch_count);
+            match self.watch.cmp(&self.unwatch) {
+                Ordering::Less => {
+                    let unwatch_count = self.unwatch-self.watch;
+                    current_serie.unwatch(unwatch_count);
+                    println!("Unwatched {} episode(s) from {}.",current_serie.name, unwatch_count);
+                }
+                Ordering::Greater => {
+                    current_serie.watch(self.watch-self.unwatch);
+                    let watched_count = self.watch-self.unwatch;
+                    println!("Watched {watched_count} episode(s) from {}.", current_serie.name);
+                }
+                Ordering::Equal => { }
             }
             current_serie.print(&self.print_mode, Some(&dir));
             current_serie.write_in_dir(&dir).expect("Write failed");
@@ -153,7 +157,7 @@ impl Args {
                         continue;
                     }
                 }
-                let path = &dir.join(&current_serie.filename());
+                let path = &dir.join(current_serie.filename());
                 if let Err(e) = fs::remove_file(path) {
                     eprintln!("ERROR: Couldn't delete {}. Produced the following error:\n{}", path.to_str().unwrap(), e);
                     process::exit(1);
