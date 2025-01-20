@@ -310,8 +310,8 @@ mod tests {
     use super::*;
 
     fn get_test_serie() -> Serie {
-        "10+20
-0+20"
+        "10/20
+0/20"
             .parse()
             .unwrap()
     }
@@ -350,8 +350,8 @@ mod tests {
     pub fn test_into_string() {
         let test = get_test_serie();
         let result: String = (&test).into();
-        let expected = "10+20
-0+20";
+        let expected = "10/20
+0/20";
         assert_eq!(result, expected);
     }
 
@@ -420,17 +420,17 @@ mod tests {
 
     #[test]
     pub fn test_merge_series_basic() {
-        let mut test: Serie = "10+20\n2+20".parse().unwrap();
-        test.merge_serie(&"0+20\n0+20\n0+10\n0+10".parse().unwrap());
-        let expected: Serie = "10+20\n2+20\n0+10\n0+10".parse().unwrap();
+        let mut test: Serie = "10/20\n2/20".parse().unwrap();
+        test.merge_serie(&"0/20\n0/20\n0/10\n0/10".parse().unwrap());
+        let expected: Serie = "10/20\n2/20\n0/10\n0/10".parse().unwrap();
         assert_eq!(test.seasons, expected.seasons)
     }
 
     #[test]
     pub fn test_merge_series_last_season_changed() {
-        let mut test: Serie = "10+20\n2+20".parse().unwrap();
-        test.merge_serie(&"0+20\n0+22".parse().unwrap());
-        let expected: Serie = "10+20\n2+22".parse().unwrap();
+        let mut test: Serie = "10/20\n2/20".parse().unwrap();
+        test.merge_serie(&"0/20\n0/22".parse().unwrap());
+        let expected: Serie = "10/20\n2/22".parse().unwrap();
         assert_eq!(test.seasons, expected.seasons)
     }
 }

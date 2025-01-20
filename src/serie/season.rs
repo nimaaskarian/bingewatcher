@@ -11,8 +11,8 @@ pub struct MalformedSeason;
 impl FromStr for Season {
     type Err = MalformedSeason;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let plus_index = s.chars().position(|c| c == '+');
-        if let Some(index) = plus_index {
+        let sep_index = s.chars().position(|c| c == '/');
+        if let Some(index) = sep_index {
             let watched = s[..index].parse();
             let episodes = s[index+1..].parse();
             if let (Ok(watched), Ok(episodes)) = (watched, episodes) {
@@ -29,7 +29,7 @@ impl FromStr for Season {
 impl From<&Season> for String {
     #[inline]
     fn from(season: &Season) -> String {
-        format!("{}+{}", season.watched, season.episodes)
+        format!("{}/{}", season.watched, season.episodes)
     }
 }
 
