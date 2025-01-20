@@ -2,7 +2,7 @@ mod season;
 use std::{
     fs::{self, File},
     io::{self, Write},
-    path::Path,
+    path::{Path, PathBuf},
     str::FromStr,
 };
 
@@ -16,6 +16,7 @@ pub enum SeriePrint {
     NextEpisode,
     Season,
     Episode,
+    Path,
 }
 
 #[derive(Debug)]
@@ -88,13 +89,14 @@ impl Serie {
     }
 
     #[inline]
-    pub fn print(&self, print: &SeriePrint) {
+    pub fn print(&self, print: &SeriePrint, dir: Option<&PathBuf>) {
         match print {
             SeriePrint::Extended => println!("{}", self.extended()),
             SeriePrint::NextEpisode => println!("{}", self.next_episode_str()),
             SeriePrint::Normal => println!("{}", self.display()),
             SeriePrint::Season => println!("{}", self.next_season()),
             SeriePrint::Episode => println!("{}", self.next_episode()),
+            SeriePrint::Path => println!("{}", dir.unwrap().join(&self.filename()).to_str().unwrap()),
         }
     }
 

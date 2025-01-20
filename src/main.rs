@@ -85,9 +85,9 @@ impl Args {
             return AppMode::DetailOnline
         }
         let dir = utils::append_home_dir(&[".cache", "bingewatcher"]);
-        let mut series: Vec<Serie> = if self.only_finished {
+        let mut series: Vec<Serie> = if !self.update_online && self.only_finished {
             utils::read_series_dir(&dir,Some(Serie::is_finished))
-        } else if !self.finished {
+        } else if !self.update_online && !self.finished {
             utils::read_series_dir(&dir,Some(Serie::is_not_finished))
         } else {
             utils::read_series_dir(&dir,None)
@@ -100,6 +100,7 @@ impl Args {
                         eprintln!("The serie \"{}\" already exists. Updating it...", serie.name);
                         let old_serie = &mut series[index];
                         old_serie.merge_serie(&serie);
+                        self.indexes.push(index);
                     } else {
                         eprintln!("ERROR: The serie \"{}\" already exists.", serie.name);
                         process::exit(1);
@@ -121,7 +122,7 @@ impl Args {
         if !self.indexes.is_empty() {
             self.manipulate_series(&mut series, dir);
         } else {
-            self.list_series(&series);
+            self.list_series(&series, dir);
         }
         AppMode::ListOrManipulate
     }
@@ -134,12 +135,12 @@ impl Args {
                 current_serie.watch(self.watch-self.unwatch);
                 let watched_count = self.watch-self.unwatch;
                 println!("Watched {watched_count} episode(s) from {}.", current_serie.name);
-            } else {
+            } else if self.watch < self.unwatch {
                 let unwatch_count = self.unwatch-self.watch;
                 current_serie.unwatch(unwatch_count);
                 println!("Unwatched {} episode(s) from {}.",current_serie.name, unwatch_count);
             }
-            current_serie.print(&self.print_mode);
+            current_serie.print(&self.print_mode, Some(&dir));
             current_serie.write_in_dir(&dir).expect("Write failed");
             if self.delete || self.delete_noask {
                 if !self.delete_noask {
@@ -163,10 +164,10 @@ impl Args {
     }
 
     #[inline]
-    fn list_series(&self, series: &[Serie]) {
+    fn list_series(&self, series: &[Serie], dir: PathBuf) {
         for (index, serie) in series.iter().enumerate() {
             print!("{index}: ");
-            serie.print(&self.print_mode);
+            serie.print(&self.print_mode, Some(&dir));
         }
     }
 }
@@ -184,7 +185,7 @@ async fn main() -> io::Result<()> {
         }
         DetailOnline => {
             if let Ok(serie) = request_detail(&args.detail_online).await {
-                serie.print(&SeriePrint::Extended);
+                serie.print(&SeriePrint::Extended, None);
                 process::exit(0);
             }
         }
