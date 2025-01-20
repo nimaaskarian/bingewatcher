@@ -290,6 +290,18 @@ Next episode: {}\n",
     fn episodes(&self) -> usize {
         self.seasons.iter().map(|season| season.episodes).sum()
     }
+
+    #[inline]
+    pub fn merge_serie(&mut self, other: &Serie) {
+        let last_index = self.seasons.len()-1;
+        let mut iter = other.seasons.iter().skip(last_index);
+        if let Some(season) = iter.next() {
+            if season.episodes > self.seasons[last_index].episodes {
+                self.seasons[last_index].episodes = season.episodes;
+            }
+        }
+        self.seasons.extend(iter.cloned());
+    }
 }
 
 mod tests {
@@ -402,5 +414,21 @@ mod tests {
         test.watch(6);
         let expected = "S01E11";
         assert_eq!(test.next_episode_str(), expected);
+    }
+
+    #[test]
+    pub fn test_merge_series_basic() {
+        let mut test: Serie = "10+20\n2+20".parse().unwrap();
+        test.merge_serie(&"0+20\n0+20\n0+10\n0+10".parse().unwrap());
+        let expected: Serie = "10+20\n2+20\n0+10\n0+10".parse().unwrap();
+        assert_eq!(test.seasons, expected.seasons)
+    }
+
+    #[test]
+    pub fn test_merge_series_last_season_changed() {
+        let mut test: Serie = "10+20\n2+20".parse().unwrap();
+        test.merge_serie(&"0+20\n0+22".parse().unwrap());
+        let expected: Serie = "10+20\n2+22".parse().unwrap();
+        assert_eq!(test.seasons, expected.seasons)
     }
 }

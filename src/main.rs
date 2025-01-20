@@ -45,6 +45,10 @@ struct Args {
     /// Add an series from episodate API (needs internet)
     #[arg(short='o', long, default_value_t=String::new())]
     add_online: String,
+    /// Update the series with the same watched values, but append new seasons to it.
+    /// use with --add-online
+    #[arg(short='u', long)]
+    update_online: bool,
     /// Show details of a series from episodate API (needs internet)
     #[arg(long, default_value_t=String::new())]
     detail_online: String,
@@ -88,14 +92,22 @@ impl Args {
         } else {
             utils::read_series_dir(&dir,None)
         };
+        // add online
         if !self.add_online.is_empty() {
             if let Ok(serie) = request_detail(&self.add_online).await {
-                if series.iter().any(|s| s.name == serie.name)  {
-                    eprintln!("The serie \"{}\" already exists.", serie.name);
-                    process::exit(1);
+                if let Some(index) = series.iter().position(|s| s.name == serie.name)  {
+                    if self.update_online {
+                        eprintln!("The serie \"{}\" already exists. Updating it...", serie.name);
+                        let old_serie = &mut series[index];
+                        old_serie.merge_serie(&serie);
+                    } else {
+                        eprintln!("ERROR: The serie \"{}\" already exists.", serie.name);
+                        process::exit(1);
+                    }
+                } else {
+                    self.indexes.push(series.len());
+                    series.push(serie);
                 }
-                self.indexes.push(series.len());
-                series.push(serie);
             }
         }
         if let Some(search) = self.search.as_ref() {
@@ -132,8 +144,8 @@ impl Args {
             if self.delete || self.delete_noask {
                 if !self.delete_noask {
                     let mut input = String::from("y");
-                    print!("Do you want to delete \"{}\" [Y/n] ", current_serie.name);
-                    io::stdout().flush().expect("Flushing stdout failed.");
+                    eprint!("Do you want to delete \"{}\" [Y/n] ", current_serie.name);
+                    io::stderr().flush().expect("Flushing stdout failed.");
                     io::stdin().read_line(&mut input).expect("Reading input failed");
                     if input.trim() == "n" {
                         continue;
@@ -141,10 +153,10 @@ impl Args {
                 }
                 let path = &dir.join(&current_serie.filename());
                 if let Err(e) = fs::remove_file(path) {
-                    println!("ERROR: Couldn't delete {}. Produced the following error:\n{}", path.to_str().unwrap(), e);
+                    eprintln!("ERROR: Couldn't delete {}. Produced the following error:\n{}", path.to_str().unwrap(), e);
                     process::exit(1);
                 } else {
-                    println!("Deleted {}", path.to_str().unwrap());
+                    eprintln!("Deleted {}", path.to_str().unwrap());
                 }
             }
         }

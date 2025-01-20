@@ -1,6 +1,6 @@
 use std::str::FromStr;
 
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Season {
     pub episodes: usize,
     pub watched: usize,
