@@ -6,7 +6,7 @@ use clap_complete::{generate, Generator, Shell};
 use onlineserie::{online_tv_show, request_detail};
 use serie::{Serie, SeriePrint};
 use std::{
-    borrow::Borrow, cell::RefCell, fs, io, path::{Path, PathBuf}, process, rc::Rc
+    cell::RefCell, fs, io::{self, Write}, path::{Path, PathBuf}, process
 };
 
 use home::home_dir;
@@ -203,6 +203,7 @@ async fn main() -> io::Result<()> {
                     let mut input = String::from("y");
                     if !args.delete_noask {
                         print!("Do you want to delete \"{}\" [Y/n] ", current_serie.name);
+                        io::stdout().flush();
                         io::stdin().read_line(&mut input)?;
                     }
                     if input.trim() != "n" {
