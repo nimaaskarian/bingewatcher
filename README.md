@@ -3,7 +3,7 @@ cli app to track your shows, using a minimalist format, and with minimum overhea
 
 # initialize a serie
 to initialize a serie (each serie consists of
-seasons. each season consists of <watched>/<total>. for example a season that
+seasons. each season consists of `<watched>/<total>`. for example a season that
 you watched 4 episodes of, and it has 10 episodes in total would be 4/10)
 
 ## initialize it using episodate api
@@ -24,7 +24,7 @@ mpv $(fd . path/to/breaking-bad $(bw -s "breaking bad" --print-mode next-episode
 ```
 
 # if you've used an old version
-the old version used a <watched>+<total> format. use the bash code below to
+the old version used a `<watched>+<total>` format. use the bash code below to
 convert all the existing files to the new (and more human-readable) format.
 ```bash
 sed 's|+|/|' -i ~/.cache/bingewatcher/*
