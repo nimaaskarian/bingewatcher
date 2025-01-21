@@ -10,13 +10,14 @@ use clap::ValueEnum;
 pub use season::Season;
 
 #[derive(Debug, Clone, ValueEnum)]
-pub enum SeriePrint {
+pub enum PrintMode {
     Normal,
     Extended,
     NextEpisode,
     Season,
     Episode,
     Path,
+    Name,
 }
 
 #[derive(Debug, Default)]
@@ -85,14 +86,15 @@ impl Serie {
     }
 
     #[inline]
-    pub fn print(&self, print: &SeriePrint, dir: Option<&PathBuf>) {
+    pub fn print(&self, print: &PrintMode, dir: Option<&PathBuf>) {
         match print {
-            SeriePrint::Extended => self.print_extended(),
-            SeriePrint::NextEpisode => println!("{}", self.next_episode_str()),
-            SeriePrint::Normal => println!("{}", self.display()),
-            SeriePrint::Season => println!("{}", self.next_season()),
-            SeriePrint::Episode => println!("{}", self.next_episode()),
-            SeriePrint::Path => println!("{}", dir.unwrap().join(self.filename()).to_str().unwrap()),
+            PrintMode::Extended => self.print_extended(),
+            PrintMode::NextEpisode => println!("{}", self.next_episode_str()),
+            PrintMode::Normal => println!("{}", self.display()),
+            PrintMode::Season => println!("{}", self.next_season()),
+            PrintMode::Episode => println!("{}", self.next_episode()),
+            PrintMode::Path => println!("{}", dir.unwrap().join(self.filename()).to_str().unwrap()),
+            PrintMode::Name => println!("{}", self.name),
         }
     }
 

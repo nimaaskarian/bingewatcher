@@ -5,7 +5,7 @@ use clap_complete::Shell;
 use std::{
     cmp::Ordering, fs, io::{self, Write}, path::PathBuf, process
 };
-use crate::{SeriePrint, Serie, utils, episodate};
+use crate::{PrintMode, Serie, utils, episodate};
 //}}}
 
 // Args {{{
@@ -42,7 +42,7 @@ pub struct Args {
 
     /// Print current season of selected series
     #[arg(short = 'p', long, default_value="normal")]
-    pub print_mode: SeriePrint,
+    pub print_mode: PrintMode,
 
     /// Add an series from episodate API (needs internet)
     #[arg(short='o', long, default_value_t=String::new())]

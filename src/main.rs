@@ -7,7 +7,7 @@ mod utils;
 mod args;
 mod episodate;
 mod serie;
-use serie::{Serie, SeriePrint};
+use serie::{Serie, PrintMode};
 use args::{AppMode::*, Args};
 use clap::{CommandFactory, Parser};
 //}}}
@@ -23,7 +23,7 @@ fn main() -> io::Result<()> {
         }
         DetailOnline => {
             let serie = episodate::request_detail(&args.detail_online);
-            serie.print(&SeriePrint::Extended, None);
+            serie.print(&PrintMode::Extended, None);
             process::exit(0);
         }
         ListOrManipulate => {}
