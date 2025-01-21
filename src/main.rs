@@ -12,18 +12,17 @@ use args::{AppMode::*, Args};
 use clap::{CommandFactory, Parser};
 //}}}
 
-#[tokio::main]
-async fn main() -> io::Result<()> {
+fn main() -> io::Result<()> {
     let mut args = Args::parse();
-    match args.app_mode().await {
+    match args.app_mode() {
         PrintCompletions(shell) => {
             utils::print_completions(shell, &mut Args::command());
         }
         SearchOnline => {
-            episodate::search(args.search_online).await;
+            episodate::search_write_to_stdout(args.search_online);
         }
         DetailOnline => {
-            let serie = episodate::request_detail(&args.detail_online).await;
+            let serie = episodate::request_detail(&args.detail_online);
             serie.print(&SeriePrint::Extended, None);
             process::exit(0);
         }

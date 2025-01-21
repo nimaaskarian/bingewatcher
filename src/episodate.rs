@@ -5,6 +5,7 @@ use std::{
     io::{self, Write},
     result,
 };
+use reqwest::blocking::Client;
 
 use crate::serie::{Season, Serie};
 
@@ -40,24 +41,24 @@ impl Display for TvShow {
     }
 }
 
-pub async fn search(query: String) {
-    if let Ok(main_response) = request_pages(query.clone(), None).await {
+pub fn search_write_to_stdout(query: String) {
+    if let Ok(main_response) = request_pages(query.clone(), None) {
         let pages = main_response.pages;
         let mut handle = io::stdout().lock();
         let _ = write!(handle, "{main_response}");
 
         for i in 2..pages + 1 {
-            if let Ok(response) = request_pages(query.clone(), Some(i)).await {
+            if let Ok(response) = request_pages(query.clone(), Some(i)) {
                 let _ = write!(handle, "{response}");
             }
         }
     }
 }
 
-pub async fn request_detail(permalink: &str) -> Serie {
+pub fn request_detail(permalink: &str) -> Serie {
     let target = format!("https://episodate.com/api/show-details?q={permalink}");
-    let response = reqwest::get(target).await.expect("Error sending get request");
-    let body = response.text().await.expect("Error reading the resonse text");
+    let response = Client::new().get(target).send().expect("Error sending get request");
+    let body = response.text().expect("Error reading the resonse text");
     let mut details: Value = serde_json::from_str(body.as_str()).expect("Error converting json");
     let details: TvShowDetails = serde_json::from_value(std::mem::take(&mut details["tvShow"])).expect("Error converting to show details");
     let mut last_season = 0;
@@ -74,11 +75,11 @@ pub async fn request_detail(permalink: &str) -> Serie {
     Serie::new(seasons, details.name)
 }
 
-async fn request_pages(query: String, page: Option<usize>) -> PageResult<Response> {
+fn request_pages(query: String, page: Option<usize>) -> PageResult<Response> {
     let page = page.unwrap_or(1);
     let target = format!("https://www.episodate.com/api/search?q={query}&page={page}");
-    if let Ok(response) = reqwest::get(target).await {
-        if let Some(response) = response.text().await.ok().and_then(|body| serde_json::from_str(body.as_str()).ok()).flatten() {
+    if let Ok(response) = Client::new().get(target).send() {
+        if let Some(response) = response.text().ok().and_then(|body| serde_json::from_str(body.as_str()).ok()).flatten() {
             return Ok(response)
         }
     }

@@ -83,7 +83,7 @@ pub enum AppMode {
 }
 
 impl Args {
-    pub async fn app_mode(&mut self) -> AppMode {
+    pub fn app_mode(&mut self) -> AppMode {
         if let Some(generator) = self.completion {
             return AppMode::PrintCompletions(generator);
         }
@@ -106,7 +106,7 @@ impl Args {
 
         };
         if !self.add_online.is_empty() {
-            self.add_online(&mut series).await;
+            self.add_online(&mut series);
         }
         if let Some(search) = self.search.as_ref() {
             if let Some(index) = series.iter().position(|serie| serie.matches(search)) {
@@ -125,8 +125,8 @@ impl Args {
     }
 
     #[inline(always)]
-    async fn add_online(&mut self, series: &mut Vec<Serie>) {
-        let serie = episodate::request_detail(&self.add_online).await;
+    fn add_online(&mut self, series: &mut Vec<Serie>) {
+        let serie = episodate::request_detail(&self.add_online);
         if let Some(index) = series.iter().position(|s| s.name == serie.name)  {
             if self.update_online {
                 eprintln!("The serie \"{}\" already exists. Updating it...", serie.name);
