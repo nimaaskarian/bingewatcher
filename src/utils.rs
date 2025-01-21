@@ -15,9 +15,8 @@ pub fn append_home_dir(strs: &[&str]) -> PathBuf {
     out
 }
 
-#[inline]
 pub fn read_series_dir(dir: &Path, filter: Option<fn(&Serie) -> bool>) -> Vec<Serie> {
-    std::fs::create_dir_all(dir);
+    let _ = std::fs::create_dir_all(dir);
     if let Ok(dir) = fs::read_dir(dir) {
         let iter = dir.flat_map(|entry| Serie::from_file(&entry.expect("File error").path()));
         if let Some(filter) = filter {

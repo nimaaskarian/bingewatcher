@@ -126,21 +126,20 @@ impl Args {
 
     #[inline(always)]
     async fn add_online(&mut self, series: &mut Vec<Serie>) {
-        if let Ok(serie) = episodate::request_detail(&self.add_online).await {
-            if let Some(index) = series.iter().position(|s| s.name == serie.name)  {
-                if self.update_online {
-                    eprintln!("The serie \"{}\" already exists. Updating it...", serie.name);
-                    let old_serie = &mut series[index];
-                    old_serie.merge_serie(&serie);
-                    self.indexes.push(index);
-                } else {
-                    eprintln!("ERROR: The serie \"{}\" already exists.", serie.name);
-                    process::exit(1);
-                }
+        let serie = episodate::request_detail(&self.add_online).await;
+        if let Some(index) = series.iter().position(|s| s.name == serie.name)  {
+            if self.update_online {
+                eprintln!("The serie \"{}\" already exists. Updating it...", serie.name);
+                let old_serie = &mut series[index];
+                old_serie.merge_serie(&serie);
+                self.indexes.push(index);
             } else {
-                self.indexes.push(series.len());
-                series.push(serie);
+                eprintln!("ERROR: The serie \"{}\" already exists.", serie.name);
+                process::exit(1);
             }
+        } else {
+            self.indexes.push(series.len());
+            series.push(serie);
         }
     }
 

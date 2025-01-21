@@ -1,20 +1,15 @@
-use error_chain::error_chain;
 use serde::{Deserialize, Serialize};
 use serde_json::{self, Value};
 use std::{
     fmt::Display,
-    io::{stdout, Write},
+    io::{self, Write},
+    result,
 };
 
 use crate::serie::{Season, Serie};
 
-error_chain! {
-    foreign_links {
-        Io(std::io::Error);
-        HttpRequest(reqwest::Error);
-        Result(serde_json::Error);
-    }
-}
+struct PageError;
+type PageResult<T> = result::Result<T, PageError>;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Response {
@@ -45,47 +40,26 @@ impl Display for TvShow {
     }
 }
 
-pub async fn search_query(query: String) -> Result<()> {
-    let main_response = request_pages(query.clone(), None).await?;
-    let pages = main_response.pages;
-    let mut handle = stdout().lock();
-    write!(handle, "{main_response}")?;
+pub async fn search(query: String) {
+    if let Ok(main_response) = request_pages(query.clone(), None).await {
+        let pages = main_response.pages;
+        let mut handle = io::stdout().lock();
+        let _ = write!(handle, "{main_response}");
 
-    for i in 2..pages + 1 {
-        if let Ok(response) = request_pages(query.clone(), Some(i)).await {
-            write!(handle, "{response}")?;
+        for i in 2..pages + 1 {
+            if let Ok(response) = request_pages(query.clone(), Some(i)).await {
+                let _ = write!(handle, "{response}");
+            }
         }
     }
-
-    Ok(())
 }
 
-pub async fn request_pages(query: String, page: Option<usize>) -> Result<Response> {
-    let page = page.unwrap_or(1);
-    let target = format!("https://www.episodate.com/api/search?q={query}&page={page}");
-    let response = reqwest::get(target).await?;
-    let body = response.text().await?;
-    let response: Response = serde_json::from_str(body.as_str())?;
-    Ok(response)
-}
-
-#[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct TvShowDetails {
-    episodes: Vec<EpisodeData>,
-    name: String,
-}
-#[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct EpisodeData {
-    season: usize,
-    episode: usize,
-}
-
-pub async fn request_detail(permalink: &str) -> Result<Serie> {
+pub async fn request_detail(permalink: &str) -> Serie {
     let target = format!("https://episodate.com/api/show-details?q={permalink}");
-    let response = reqwest::get(target).await?;
-    let body = response.text().await?;
-    let details: Value = serde_json::from_str(body.as_str())?;
-    let details: TvShowDetails = serde_json::from_value(details["tvShow"].clone())?;
+    let response = reqwest::get(target).await.expect("Error sending get request");
+    let body = response.text().await.expect("Error reading the resonse text");
+    let mut details: Value = serde_json::from_str(body.as_str()).expect("Error converting json");
+    let details: TvShowDetails = serde_json::from_value(std::mem::take(&mut details["tvShow"])).expect("Error converting to show details");
     let mut last_season = 0;
     let mut seasons: Vec<Season> = vec![];
     for episode in details.episodes {
@@ -97,5 +71,27 @@ pub async fn request_detail(permalink: &str) -> Result<Serie> {
         }
         seasons[last_season - 1].episodes += 1;
     }
-    Ok(Serie::new(seasons, details.name))
+    Serie::new(seasons, details.name)
+}
+
+async fn request_pages(query: String, page: Option<usize>) -> PageResult<Response> {
+    let page = page.unwrap_or(1);
+    let target = format!("https://www.episodate.com/api/search?q={query}&page={page}");
+    if let Ok(response) = reqwest::get(target).await {
+        if let Some(response) = response.text().await.ok().and_then(|body| serde_json::from_str(body.as_str()).ok()).flatten() {
+            return Ok(response)
+        }
+    }
+    Err(PageError)
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+struct TvShowDetails {
+    episodes: Vec<EpisodeData>,
+    name: String,
+}
+#[derive(Debug, Serialize, Deserialize, Clone)]
+struct EpisodeData {
+    season: usize,
+    episode: usize,
 }

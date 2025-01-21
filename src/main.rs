@@ -20,13 +20,12 @@ async fn main() -> io::Result<()> {
             utils::print_completions(shell, &mut Args::command());
         }
         SearchOnline => {
-            let _ = episodate::search_query(args.search_online).await;
+            episodate::search(args.search_online).await;
         }
         DetailOnline => {
-            if let Ok(serie) = episodate::request_detail(&args.detail_online).await {
-                serie.print(&SeriePrint::Extended, None);
-                process::exit(0);
-            }
+            let serie = episodate::request_detail(&args.detail_online).await;
+            serie.print(&SeriePrint::Extended, None);
+            process::exit(0);
         }
         ListOrManipulate => {}
     }
