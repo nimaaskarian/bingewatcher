@@ -95,10 +95,9 @@ impl Args {
         }
         if self.update_online && self.add_online.is_empty() {
             eprintln!("Warning: you used update-online with no add-online. Ignoring it.");
-            self.update_online = false;
         }
         let dir = utils::append_home_dir(&[".cache", "bingewatcher"]);
-        let mut series: Vec<Serie> = match (self.update_online, self.only_finished, self.finished)  {
+        let mut series: Vec<Serie> = match (!self.add_online.is_empty(), self.only_finished, self.finished)  {
             (_, false, true) |
             (true, _, _) => utils::read_series_dir(&dir,None),
             (_, true, _) => utils::read_series_dir(&dir,Some(Serie::is_finished)),
