@@ -45,7 +45,7 @@ impl Display for TvShow {
     }
 }
 
-pub async fn online_tv_show(query: String) -> Result<()> {
+pub async fn search_query(query: String) -> Result<()> {
     let main_response = request_pages(query.clone(), None).await?;
     let pages = main_response.pages;
     let mut handle = stdout().lock();
@@ -80,8 +80,8 @@ pub struct EpisodeData {
     episode: usize,
 }
 
-pub async fn request_detail(query: &str) -> Result<Serie> {
-    let target = format!("https://episodate.com/api/show-details?q={query}");
+pub async fn request_detail(permalink: &str) -> Result<Serie> {
+    let target = format!("https://episodate.com/api/show-details?q={permalink}");
     let response = reqwest::get(target).await?;
     let body = response.text().await?;
     let details: Value = serde_json::from_str(body.as_str())?;
