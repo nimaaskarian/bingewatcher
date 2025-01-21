@@ -16,6 +16,10 @@ pub struct Args {
     #[arg(short, long)]
     pub search: Option<String>,
 
+    /// Perform a trial run with no changes made
+    #[arg(short='n', long)]
+    pub dry_run: bool,
+
     /// Add watched
     #[arg(short = 'a', long, default_value_t = 0)]
     pub watch: usize,
@@ -158,7 +162,9 @@ impl Args {
                 Ordering::Equal => { }
             }
             current_serie.print(&self.print_mode, Some(&dir));
-            current_serie.write_in_dir(&dir).expect("Write failed");
+            if !self.dry_run {
+                current_serie.write_in_dir(&dir).expect("Write failed");
+            }
             if self.delete || self.delete_noask {
                 if !self.delete_noask {
                     let mut input = String::from("y");
@@ -170,11 +176,13 @@ impl Args {
                     }
                 }
                 let path = &dir.join(current_serie.filename());
-                if let Err(e) = fs::remove_file(path) {
-                    eprintln!("ERROR: Couldn't delete {}. Produced the following error:\n{}", path.to_str().unwrap(), e);
-                    process::exit(1);
-                } else {
-                    eprintln!("Deleted {}", path.to_str().unwrap());
+                if !self.dry_run {
+                    if let Err(e) = fs::remove_file(path) {
+                        eprintln!("ERROR: Couldn't delete {}. Produced the following error:\n{}", path.to_str().unwrap(), e);
+                        process::exit(1);
+                    } else {
+                        eprintln!("Deleted {}", path.to_str().unwrap());
+                    }
                 }
             }
         }
