@@ -94,12 +94,12 @@ impl Args {
             self.update_online = false;
         }
         let dir = utils::append_home_dir(&[".cache", "bingewatcher"]);
-        let mut series: Vec<Serie> = if !self.update_online && self.only_finished {
-            utils::read_series_dir(&dir,Some(Serie::is_finished))
-        } else if !self.update_online && !self.finished {
-            utils::read_series_dir(&dir,Some(Serie::is_not_finished))
-        } else {
-            utils::read_series_dir(&dir,None)
+        let mut series: Vec<Serie> = match (self.update_online, self.only_finished, self.finished)  {
+            (_, false, true) |
+            (true, _, _) => utils::read_series_dir(&dir,None),
+            (_, true, _) => utils::read_series_dir(&dir,Some(Serie::is_finished)),
+            _ => utils::read_series_dir(&dir,Some(Serie::is_not_finished)),
+
         };
         if !self.add_online.is_empty() {
             self.add_online(&mut series).await;
@@ -121,7 +121,7 @@ impl Args {
     }
 
     #[inline(always)]
-    pub async fn add_online(&mut self, series: &mut Vec<Serie>) {
+    async fn add_online(&mut self, series: &mut Vec<Serie>) {
         if let Ok(serie) = episodate::request_detail(&self.add_online).await {
             if let Some(index) = series.iter().position(|s| s.name == serie.name)  {
                 if self.update_online {
@@ -141,7 +141,7 @@ impl Args {
     }
 
     #[inline(always)]
-    pub fn manipulate_series(&self, mut series: Vec<Serie>, dir: PathBuf) {
+    fn manipulate_series(&self, mut series: Vec<Serie>, dir: PathBuf) {
         for &index in &self.indexes {
             let current_serie = &mut series[index];
             match self.watch.cmp(&self.unwatch) {
@@ -181,7 +181,7 @@ impl Args {
     }
 
     #[inline(always)]
-    pub fn list_series(&self, series: Vec<Serie>, dir: PathBuf) {
+    fn list_series(&self, series: Vec<Serie>, dir: PathBuf) {
         for (index, serie) in series.iter().enumerate() {
             print!("{index}: ");
             serie.print(&self.print_mode, Some(&dir));

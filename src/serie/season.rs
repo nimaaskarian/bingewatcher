@@ -1,6 +1,6 @@
 use std::str::FromStr;
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Default)]
 pub struct Season {
     pub episodes: usize,
     pub watched: usize,
@@ -38,12 +38,12 @@ impl Season {
     pub fn new(episodes: usize) -> Self {
         Season {
             episodes,
-            watched: 0,
+            ..Default::default()
         }
     }
 
     #[inline]
-    pub fn not_watched(&self) -> usize {
+    fn not_watched(&self) -> usize {
         self.episodes - self.watched
     }
 

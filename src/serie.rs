@@ -19,7 +19,7 @@ pub enum SeriePrint {
     Path,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct Serie {
     seasons: Vec<Season>,
     pub name: String,
@@ -75,10 +75,6 @@ impl FromStr for Serie {
 }
 
 impl Serie {
-    pub fn empty<S: AsRef<str>>(string_like: S) -> Self {
-        Self::new(vec![], string_like)
-    }
-
     pub fn new<S: AsRef<str>>(seasons: Vec<Season>, string_like: S) -> Self {
         let name = string_like.as_ref().to_string();
         Serie {
@@ -138,7 +134,11 @@ impl Serie {
 
     #[inline]
     pub fn is_finished(&self) -> bool {
-        self.watched() == self.episodes()
+        if let Some(season) = self.seasons.last() {
+            season.episodes == season.watched
+        } else {
+            true
+        }
     }
 
     #[inline]
@@ -216,8 +216,8 @@ Watched/Total: {}/{}
             self.name,
             self.watched_percentage(),
             self.next_episode_str(),
-            self.seasons.iter().map(|s|s.watched).sum::<usize>(),
-            self.seasons.iter().map(|s|s.episodes).sum::<usize>(),
+            self.total_watched(),
+            self.total_episodes(),
         );
         for (i, season) in self.seasons.iter().enumerate() {
             println!("{}: {}",i+1, season.display());
@@ -270,7 +270,7 @@ Watched/Total: {}/{}
 
     #[inline]
     pub fn watched_percentage(&self) -> f32 {
-        self.watched() as f32 / self.episodes() as f32 * 100.
+        self.total_watched() as f32 / self.total_episodes() as f32 * 100.
     }
 
     #[inline]
@@ -280,12 +280,12 @@ Watched/Total: {}/{}
     }
 
     #[inline]
-    fn watched(&self) -> usize {
+    pub fn total_watched(&self) -> usize {
         self.seasons.iter().map(|season| season.watched).sum()
     }
 
     #[inline]
-    fn episodes(&self) -> usize {
+    pub fn total_episodes(&self) -> usize {
         self.seasons.iter().map(|season| season.episodes).sum()
     }
 
@@ -314,26 +314,32 @@ mod tests {
 
     #[test]
     pub fn test_name() {
-        let test = Serie::empty("Breaking Bad");
+        let test = Serie {
+            name: "Breaking Bad".to_string(),
+            ..Default::default() 
+        };
         assert_eq!(test.name, "Breaking Bad")
     }
 
     #[test]
     pub fn test_filename() {
-        let test = Serie::empty("Breaking Bad");
+        let test = Serie {
+            name: "Breaking Bad".to_string(),
+            ..Default::default() 
+        };
         assert_eq!(test.filename(), "Breaking Bad.bw")
     }
 
     #[test]
     pub fn test_episodes() {
         let test = get_test_serie();
-        assert_eq!(test.episodes(), 40);
+        assert_eq!(test.total_episodes(), 40);
     }
 
     #[test]
     pub fn test_watched() {
         let test = get_test_serie();
-        assert_eq!(test.watched(), 10);
+        assert_eq!(test.total_watched(), 10);
     }
 
     #[test]
@@ -355,8 +361,8 @@ mod tests {
     pub fn test_add() {
         let mut test = get_test_serie();
         test.add(Season::new(40));
-        assert_eq!(test.episodes(), 80);
-        assert_eq!(test.watched(), 10);
+        assert_eq!(test.total_episodes(), 80);
+        assert_eq!(test.total_watched(), 10);
     }
 
     #[test]
@@ -365,8 +371,8 @@ mod tests {
         test.watch(9);
         assert_eq!(test.current_season_index.unwrap(), 0);
         test.watch(11);
-        assert_eq!(test.episodes(), 40);
-        assert_eq!(test.watched(), 30);
+        assert_eq!(test.total_episodes(), 40);
+        assert_eq!(test.total_watched(), 30);
         assert_eq!(test.seasons[0].watched, 20);
         assert_eq!(test.seasons[1].watched, 10);
         assert_eq!(test.current_season_index.unwrap(), 1);
@@ -385,8 +391,8 @@ mod tests {
         test.unwatch(6);
         assert_eq!(test.current_season_index.unwrap(), 1);
 
-        assert_eq!(test.episodes(), 40);
-        assert_eq!(test.watched(), 24);
+        assert_eq!(test.total_episodes(), 40);
+        assert_eq!(test.total_watched(), 24);
         assert_eq!(test.seasons[0].watched, 20);
         assert_eq!(test.seasons[1].watched, 4);
         test.unwatch(6);
