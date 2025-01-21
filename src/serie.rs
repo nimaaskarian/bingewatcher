@@ -245,9 +245,7 @@ Watched/Total: {}/{}
     #[inline]
     pub fn watch(&mut self, count: usize) -> usize {
         let mut watch_count = count;
-        let season_index = self.current_season_index;
-
-        if let Some(mut index) = season_index {
+        if let Some(mut index) = self.current_season_index {
             loop {
                 watch_count = self.seasons[index].watch(watch_count);
                 if watch_count == 0 || index + 1 >= self.seasons.len() {
@@ -257,7 +255,11 @@ Watched/Total: {}/{}
             }
             self.current_season_index = Some(index);
             if self.current_season().unwrap().is_finished() {
-                self.current_season_index = None;
+                if index + 1 < self.seasons.len() {
+                    self.current_season_index = Some(index+1);
+                } else {
+                    self.current_season_index = None;
+                }
             }
         }
         watch_count
@@ -302,6 +304,7 @@ Watched/Total: {}/{}
     }
 }
 
+#[cfg(test)]
 mod tests {
     use super::*;
 
@@ -313,7 +316,7 @@ mod tests {
     }
 
     #[test]
-    pub fn test_name() {
+    fn test_name() {
         let test = Serie {
             name: "Breaking Bad".to_string(),
             ..Default::default() 
@@ -322,7 +325,7 @@ mod tests {
     }
 
     #[test]
-    pub fn test_filename() {
+    fn test_filename() {
         let test = Serie {
             name: "Breaking Bad".to_string(),
             ..Default::default() 
@@ -331,25 +334,25 @@ mod tests {
     }
 
     #[test]
-    pub fn test_episodes() {
+    fn test_episodes() {
         let test = get_test_serie();
         assert_eq!(test.total_episodes(), 40);
     }
 
     #[test]
-    pub fn test_watched() {
+    fn test_watched() {
         let test = get_test_serie();
         assert_eq!(test.total_watched(), 10);
     }
 
     #[test]
-    pub fn test_percentage() {
+    fn test_percentage() {
         let test = get_test_serie();
         assert_eq!(test.watched_percentage(), 25.);
     }
 
     #[test]
-    pub fn test_into_string() {
+    fn test_into_string() {
         let test = get_test_serie();
         let result: String = (&test).into();
         let expected = "10/20
@@ -358,7 +361,7 @@ mod tests {
     }
 
     #[test]
-    pub fn test_add() {
+    fn test_add() {
         let mut test = get_test_serie();
         test.add(Season::new(40));
         assert_eq!(test.total_episodes(), 80);
@@ -366,7 +369,7 @@ mod tests {
     }
 
     #[test]
-    pub fn test_watch() {
+    fn test_watch() {
         let mut test = get_test_serie();
         test.watch(9);
         assert_eq!(test.current_season_index.unwrap(), 0);
@@ -385,7 +388,18 @@ mod tests {
     }
 
     #[test]
-    pub fn test_unwatch() {
+    fn test_watch_next_season() {
+        let mut test = get_test_serie();
+        test.watch(10);
+        assert_eq!(test.total_watched(), 20);
+        test.watch(10);
+        assert_eq!(test.total_watched(), 30);
+        test.watch(10);
+        assert_eq!(test.total_watched(), 40);
+    }
+
+    #[test]
+    fn test_unwatch() {
         let mut test = get_test_serie();
         test.watch(20);
         test.unwatch(6);
@@ -406,7 +420,7 @@ mod tests {
     }
 
     #[test]
-    pub fn test_next_episode() {
+    fn test_next_episode() {
         let mut test = get_test_serie();
         let expected = "S01E11";
         assert_eq!(test.next_episode_str(), expected);
@@ -421,7 +435,16 @@ mod tests {
     }
 
     #[test]
-    pub fn test_merge_series_basic() {
+    fn test_finished() {
+        let mut test: Serie = "10/20\n0/20".parse().unwrap();
+        test.watch(10);
+        assert!(test.is_not_finished());
+        test.watch(20);
+        assert!(test.is_finished());
+    }
+
+    #[test]
+    fn test_merge_series_basic() {
         let mut test: Serie = "10/20\n2/20".parse().unwrap();
         test.merge_serie(&"0/20\n0/20\n0/10\n0/10".parse().unwrap());
         let expected: Serie = "10/20\n2/20\n0/10\n0/10".parse().unwrap();
@@ -429,7 +452,7 @@ mod tests {
     }
 
     #[test]
-    pub fn test_merge_series_last_season_changed() {
+    fn test_merge_series_last_season_changed() {
         let mut test: Serie = "10/20\n2/20".parse().unwrap();
         test.merge_serie(&"0/20\n0/22".parse().unwrap());
         let expected: Serie = "10/20\n2/22".parse().unwrap();
