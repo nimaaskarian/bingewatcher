@@ -253,11 +253,10 @@ Watched/Total: {}/{}
             self.current_season_index = Some(index);
             if !self.seasons[index-1].is_finished() {
                 self.current_season_index = Some(index-1);
-            } else {
-                if index >= self.seasons.len() {
-                    self.current_season_index = None;
-                }
+            } else if index >= self.seasons.len() {
+                self.current_season_index = None;
             }
+            
         }
         watch_count
     }
