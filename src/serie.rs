@@ -246,18 +246,15 @@ Watched/Total: {}/{}
     pub fn watch(&mut self, count: usize) -> usize {
         let mut watch_count = count;
         if let Some(mut index) = self.current_season_index {
-            loop {
+            while index < self.seasons.len() && watch_count > 0 {
                 watch_count = self.seasons[index].watch(watch_count);
-                if watch_count == 0 || index + 1 >= self.seasons.len() {
-                    break;
-                }
                 index += 1;
             }
             self.current_season_index = Some(index);
-            if self.current_season().unwrap().is_finished() {
-                if index + 1 < self.seasons.len() {
-                    self.current_season_index = Some(index+1);
-                } else {
+            if !self.seasons[index-1].is_finished() {
+                self.current_season_index = Some(index-1);
+            } else {
+                if index >= self.seasons.len() {
                     self.current_season_index = None;
                 }
             }
@@ -388,14 +385,28 @@ mod tests {
     }
 
     #[test]
-    fn test_watch_next_season() {
+    fn test_watch_edge() {
         let mut test = get_test_serie();
         test.watch(10);
+        assert_eq!(test.next_episode_str().as_str(), "S02E01");
         assert_eq!(test.total_watched(), 20);
         test.watch(10);
+        assert_eq!(test.next_episode_str().as_str(), "S02E11");
         assert_eq!(test.total_watched(), 30);
         test.watch(10);
+        assert_eq!(test.next_episode_str().as_str(), "FINISHED");
         assert_eq!(test.total_watched(), 40);
+    }
+
+    #[test]
+    fn test_unwatch_edge() {
+        let mut test = get_test_serie();
+        test.watch(10);
+        assert_eq!(test.next_episode_str().as_str(), "S02E01");
+        assert_eq!(test.total_watched(), 20);
+        test.unwatch(20);
+        assert_eq!(test.next_episode_str().as_str(), "S01E01");
+        assert_eq!(test.total_watched(), 0);
     }
 
     #[test]
