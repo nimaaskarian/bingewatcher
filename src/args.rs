@@ -188,8 +188,7 @@ impl Args {
 
     #[inline(always)]
     fn list_series(&self, series: Vec<Serie>, dir: PathBuf) {
-        for (index, serie) in series.iter().enumerate() {
-            print!("{index}: ");
+        for serie in series {
             serie.print(&self.print_mode, Some(&dir));
         }
     }
