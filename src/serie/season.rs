@@ -1,3 +1,4 @@
+use core::fmt;
 use std::str::FromStr;
 
 #[derive(Debug, Clone, PartialEq, Default)]
@@ -26,10 +27,9 @@ impl FromStr for Season {
     }
 }
 
-impl From<&Season> for String {
-    #[inline]
-    fn from(season: &Season) -> String {
-        format!("{}/{}", season.watched, season.episodes)
+impl fmt::Display for Season {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}/{}", self.watched, self.episodes)
     }
 }
 

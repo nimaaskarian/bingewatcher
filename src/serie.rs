@@ -1,6 +1,7 @@
 // vim:foldmethod=marker
 // imports{{{
 mod season;
+use core::fmt;
 use std::{
     fs::{self, File},
     io::{self, Write},
@@ -49,13 +50,15 @@ fn number_width(mut number: usize) -> usize {
     }
 }
 
-impl From<&Serie> for String {
-    fn from(serie: &Serie) -> String {
-        serie.seasons
-            .iter()
-            .map(|season| season.into())
-            .collect::<Vec<String>>()
-            .join("\n")
+impl fmt::Display for Serie {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        for season in &self.seasons[..self.seasons.len()-1] {
+            writeln!(f, "{}", season)?;
+        }
+        if let Some(season) = self.seasons.last() {
+            write!(f, "{}", season)?;
+        }
+        Ok(())
     }
 }
 
@@ -109,13 +112,12 @@ impl Serie {
     #[inline]
     pub fn write(&self, path: PathBuf) -> io::Result<()> {
         let mut file = File::create(path)?;
-        let self_str: String = self.into();
-        write!(file, "{}", self_str)?;
+        write!(file, "{}", self)?;
         Ok(())
     }
 
     #[inline]
-    pub fn write_in_dir(&self, dir: &PathBuf) -> io::Result<()> {
+    pub fn write_in_dir(&self, dir: &Path) -> io::Result<()> {
         let path = dir.join(self.filename());
         self.write(path)?;
         Ok(())
@@ -312,6 +314,8 @@ Next episode: {}
 
 #[cfg(test)]
 mod tests {
+    use io::BufWriter;
+
     use super::*;
 
     fn get_test_serie() -> Serie {
@@ -360,7 +364,9 @@ mod tests {
     #[test]
     fn test_into_string() {
         let test = get_test_serie();
-        let result: String = (&test).into();
+        let mut buf = BufWriter::new(Vec::new());
+        write!(buf, "{}", test);
+        let result = String::from_utf8(buf.into_inner().unwrap()).unwrap();
         let expected = "10/20
 0/20";
         assert_eq!(result, expected);

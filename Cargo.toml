@@ -23,5 +23,5 @@ strip = "debuginfo"
 criterion = { version = "0.5" }
 
 [[bench]]
-name = "test_1000_seasons"
+name = "bench_series"
 harness = false

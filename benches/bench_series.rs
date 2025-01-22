@@ -1,8 +1,6 @@
 use std::{env, fs::File, hint::black_box, path::PathBuf};
 
-use bw::{
-    episodate::request_detail,
-};
+use bw::episodate::request_detail;
 
 use criterion::{criterion_group, criterion_main, Criterion};
 

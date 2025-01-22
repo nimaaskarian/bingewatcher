@@ -5,7 +5,7 @@ use std::{
 };
 use clap::{CommandFactory, Parser};
 use bw::{
-    serie::{Serie, PrintMode},
+    serie::PrintMode,
     args::{AppMode::*, Args},
     utils,
     episodate,
