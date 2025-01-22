@@ -21,6 +21,12 @@ fn main() -> io::Result<()> {
         SearchOnline => {
             episodate::search_write_to_stdout(args.search_online);
         }
+        PrintPath => {
+            if !args.name_to_path.ends_with(".bw") {
+                args.name_to_path+=".bw";
+            }
+            println!("{}", args.dir.join(&args.name_to_path).to_str().unwrap());
+        }
         DetailOnline => {
             let serie = episodate::request_detail(&args.detail_online);
             serie.print(&PrintMode::Extended, None);

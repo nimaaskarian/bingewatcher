@@ -71,11 +71,15 @@ pub struct Args {
     
     /// Convert a serie name to a serie path and print
     #[arg(long, default_value_t=String::new())]
-    name_to_path: String,
+    pub name_to_path: String,
 
     /// Selected indexes
     #[arg(last = true)]
     pub indexes: Vec<usize>,
+
+    /// Path to todo file (and notes sibling directory)
+    #[arg(default_value=utils::append_home_dir(&[".cache", "bingewatcher"]).into_os_string())]
+    pub dir: PathBuf,
 }
 //}}}
 
@@ -83,6 +87,7 @@ pub enum AppMode {
     PrintCompletions(Shell),
     SearchOnline,
     DetailOnline,
+    PrintPath,
     MainDoNothing,
 }
 
@@ -100,19 +105,14 @@ impl Args {
         if self.update_online && self.add_online.is_empty() {
             eprintln!("Warning: you used update-online with no add-online. Ignoring it.");
         }
-        let dir = utils::append_home_dir(&[".cache", "bingewatcher"]);
         if !self.name_to_path.is_empty() {
-            if !self.name_to_path.ends_with(".bw") {
-                self.name_to_path+=".bw";
-            }
-            println!("{}", dir.join(&self.name_to_path).to_str().unwrap());
-            return AppMode::MainDoNothing;
+            return AppMode::PrintPath;
         }
         let mut series: Vec<Serie> = match (!self.add_online.is_empty(), self.only_finished, self.finished)  {
-            (_, false, true) |
-            (true, _, _) => utils::read_series_dir(&dir,None),
-            (_, true, _) => utils::read_series_dir(&dir,Some(Serie::is_finished)),
-            _ => utils::read_series_dir(&dir,Some(Serie::is_not_finished)),
+            (false, false, true) |
+            (true, _, _) => utils::read_series_dir(&self.dir,None),
+            (_, true, _) => utils::read_series_dir(&self.dir,Some(Serie::is_finished)),
+            _ => utils::read_series_dir(&self.dir,Some(Serie::is_not_finished)),
 
         };
         if !self.add_online.is_empty() {
@@ -127,9 +127,9 @@ impl Args {
             }
         }
         if !self.indexes.is_empty() {
-            self.manipulate_series(series, dir);
+            self.manipulate_series(series);
         } else {
-            self.list_series(series, dir);
+            self.list_series(series);
         }
         AppMode::MainDoNothing
     }
@@ -154,7 +154,7 @@ impl Args {
     }
 
     #[inline(always)]
-    fn manipulate_series(&self, mut series: Vec<Serie>, dir: PathBuf) {
+    fn manipulate_series(&self, mut series: Vec<Serie>) {
         for &index in &self.indexes {
             let current_serie = &mut series[index];
             match self.watch.cmp(&self.unwatch) {
@@ -170,9 +170,9 @@ impl Args {
                 }
                 Ordering::Equal => { }
             }
-            current_serie.print(&self.print_mode, Some(&dir));
+            current_serie.print(&self.print_mode, Some(&self.dir));
             if !self.dry_run {
-                current_serie.write_in_dir(&dir).expect("Write failed");
+                current_serie.write_in_dir(&self.dir).expect("Write failed");
             }
             if self.delete || self.delete_noask {
                 if !self.delete_noask {
@@ -187,7 +187,7 @@ impl Args {
                         continue;
                     }
                 }
-                let path = &dir.join(current_serie.filename());
+                let path = &self.dir.join(current_serie.filename());
                 if self.dry_run {
                     eprintln!("Deleted {} (dry-run)", path.to_str().unwrap());
                 } else {
@@ -203,9 +203,9 @@ impl Args {
     }
 
     #[inline(always)]
-    fn list_series(&self, series: Vec<Serie>, dir: PathBuf) {
+    fn list_series(&self, series: Vec<Serie>) {
         for serie in series {
-            serie.print(&self.print_mode, Some(&dir));
+            serie.print(&self.print_mode, Some(&self.dir));
         }
     }
 }
