@@ -190,13 +190,11 @@ impl Args {
                 let path = &self.dir.join(current_serie.filename());
                 if self.dry_run {
                     eprintln!("Deleted {} (dry-run)", path.to_str().unwrap());
+                } else if let Err(e) = fs::remove_file(path) {
+                    eprintln!("ERROR: Couldn't delete {}. Produced the following error:\n{}", path.to_str().unwrap(), e);
+                    process::exit(1);
                 } else {
-                    if let Err(e) = fs::remove_file(path) {
-                        eprintln!("ERROR: Couldn't delete {}. Produced the following error:\n{}", path.to_str().unwrap(), e);
-                        process::exit(1);
-                    } else {
-                        eprintln!("Deleted {}", path.to_str().unwrap());
-                    }
+                    eprintln!("Deleted {}", path.to_str().unwrap());
                 }
             }
         }

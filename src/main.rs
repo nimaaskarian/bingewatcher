@@ -22,10 +22,12 @@ fn main() -> io::Result<()> {
             episodate::search_write_to_stdout(args.search_online);
         }
         PrintPath => {
+            let path = args.dir.join(&args.name_to_path);
             if !args.name_to_path.ends_with(".bw") {
-                args.name_to_path+=".bw";
+                println!("{}", path.to_str().unwrap());
+            } else {
+                println!("{}.bw", path.to_str().unwrap());
             }
-            println!("{}", args.dir.join(&args.name_to_path).to_str().unwrap());
         }
         DetailOnline => {
             let serie = episodate::request_detail(&args.detail_online);

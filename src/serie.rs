@@ -220,8 +220,8 @@ impl Serie {
         println!(
             "Name: {}
 Percentage: {:.2}%
-Next episode: {}
 Watched/Total: {}/{}
+Next episode: {}
 ",
             self.name,
             self.watched_percentage(),
