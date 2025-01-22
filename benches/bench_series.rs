@@ -1,15 +1,22 @@
-use std::{env, fs::File, hint::black_box, path::PathBuf};
+use std::{hint::black_box, path::PathBuf};
 
-use bw::episodate::request_detail;
-
+use clap::Parser;
 use criterion::{criterion_group, criterion_main, Criterion};
 
+
 fn write(c: &mut Criterion) {
-    let serie = request_detail("breaking-bad");
+    let serie = bw::episodate::request_detail("breaking-bad");
     c.bench_function("write breaking bad", |b| b.iter(||{
         black_box(&serie).write(PathBuf::from("./breaking-bad.bw"))
     }));
 }
 
-criterion_group!(benches,write);
+fn read_system_series(c: &mut Criterion) {
+    let mut args = bw::args::Args::parse_from(["";0]);
+    c.bench_function("read system series", |b| b.iter(||{
+        black_box(&mut args).app_mode()
+    }));
+}
+
+criterion_group!(benches,write, read_system_series);
 criterion_main!(benches);
