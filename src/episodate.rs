@@ -95,4 +95,50 @@ struct TvShowDetails {
 struct EpisodeData {
     season: usize,
     episode: usize,
+    name: String,
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    #[test]
+    fn test_page_detail_breaking_bad() {
+        let serie = request_detail("breaking-bad");
+        let expected = Serie::new(vec![
+            Season::new(7),
+            Season::new(13),
+            Season::new(13),
+            Season::new(13),
+            Season::new(16),
+            Season::new(8),
+        ], "Breaking Bad");
+        assert_eq!(serie, expected)
+    }
+
+    #[test]
+    fn test_page_detail_peaky_blinders() {
+        let serie = request_detail("peaky-blinders");
+        let expected = Serie::new(vec![
+            Season::new(6),
+            Season::new(6),
+            Season::new(6),
+            Season::new(6),
+            Season::new(6),
+            Season::new(6),
+        ], "Peaky Blinders");
+        assert_eq!(serie, expected)
+    }
+
+    #[test]
+    fn test_page_detail_person_of_interest() {
+        let serie = request_detail("person-of-interest");
+        let expected = Serie::new(vec![
+            Season::new(23),
+            Season::new(22),
+            Season::new(23),
+            Season::new(22),
+            Season::new(13),
+        ], "Person of Interest");
+        assert_eq!(serie, expected)
+    }
 }

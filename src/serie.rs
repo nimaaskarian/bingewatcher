@@ -28,7 +28,7 @@ pub enum PrintMode {
     Name,
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, PartialEq)]
 pub struct Serie {
     seasons: Vec<Season>,
     pub name: String,
