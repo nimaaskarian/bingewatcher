@@ -19,14 +19,14 @@ fn read_system_series(c: &mut Criterion) {
 }
 
 fn read_system_series_finished(c: &mut Criterion) {
-    let mut args = bw::args::Args::parse_from(["-F"]);
+    let mut args = bw::args::Args::parse_from(["-i f"]);
     c.bench_function("read system series finished", |b| b.iter(||{
         black_box(&mut args).app_mode()
     }));
 }
 
 fn read_system_series_all(c: &mut Criterion) {
-    let mut args = bw::args::Args::parse_from(["-f"]);
+    let mut args = bw::args::Args::parse_from(["-i a"]);
     c.bench_function("read system series all", |b| b.iter(||{
         black_box(&mut args).app_mode()
     }));

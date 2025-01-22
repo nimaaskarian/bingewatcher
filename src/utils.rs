@@ -3,7 +3,7 @@ use home::home_dir;
 use clap::Command;
 use clap_complete::{generate, Generator};
 use std::{
-    fs, io::{self}, path::{Path, PathBuf},
+    fs, io::{self}, iter::FlatMap, path::{Path, PathBuf}
 };
 
 #[inline(always)]
@@ -15,18 +15,12 @@ pub fn append_home_dir(strs: &[&str]) -> PathBuf {
     out
 }
 
-pub fn read_series_dir(dir: &Path, filter: Option<fn(&Serie) -> bool>) -> Vec<Serie> {
+pub fn series_dir_reader(dir: &Path) 
+-> io::Result<FlatMap<fs::ReadDir, Option<Serie>, impl FnMut(Result<fs::DirEntry, io::Error>) -> Option<Serie>>>
+{
     let _ = std::fs::create_dir_all(dir);
-    if let Ok(dir) = fs::read_dir(dir) {
-        let iter = dir.flat_map(|entry| Serie::from_file(&entry.expect("File error").path()));
-        if let Some(filter) = filter {
-            iter.filter(filter).collect()
-        } else {
-            iter.collect()
-        }
-    } else {
-        vec![]
-    }
+    let dir = fs::read_dir(dir)?;
+    Ok(dir.flat_map(|entry| Serie::from_file(&entry.expect("File error").path())))
 }
 
 pub fn print_completions<G: Generator>(gen: G, cmd: &mut Command) {
