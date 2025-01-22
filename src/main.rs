@@ -26,7 +26,7 @@ fn main() -> io::Result<()> {
             serie.print(&PrintMode::Extended, None);
             process::exit(0);
         }
-        ListOrManipulate => {}
+        MainDoNothing => {}
     }
     Ok(())
 }

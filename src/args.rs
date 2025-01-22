@@ -16,10 +16,6 @@ pub struct Args {
     #[arg(short, long)]
     pub search: Option<String>,
 
-    /// Perform a trial run with no changes made
-    #[arg(short='n', long)]
-    pub dry_run: bool,
-
     /// Add watched
     #[arg(short = 'a', long, default_value_t = 0)]
     pub watch: usize,
@@ -27,10 +23,6 @@ pub struct Args {
     /// Remove watched
     #[arg(short = 'r', long, default_value_t = 0)]
     pub unwatch: usize,
-
-    /// Print shell completion
-    #[arg(short='c', long)]
-    pub completion: Option<Shell>,
 
     /// Delete selected series
     #[arg(short, long, default_value_t = false)]
@@ -69,6 +61,18 @@ pub struct Args {
     #[arg(short = 'F', long, default_value_t = false)]
     pub only_finished: bool,
 
+    /// Print shell completion
+    #[arg(short='c', long)]
+    pub completion: Option<Shell>,
+
+    /// Perform a trial run with no changes made
+    #[arg(short='n', long)]
+    pub dry_run: bool,
+    
+    /// Convert a serie name to a serie path and print
+    #[arg(long, default_value_t=String::new())]
+    name_to_path: String,
+
     /// Selected indexes
     #[arg(last = true)]
     pub indexes: Vec<usize>,
@@ -79,7 +83,7 @@ pub enum AppMode {
     PrintCompletions(Shell),
     SearchOnline,
     DetailOnline,
-    ListOrManipulate,
+    MainDoNothing,
 }
 
 impl Args {
@@ -97,6 +101,13 @@ impl Args {
             eprintln!("Warning: you used update-online with no add-online. Ignoring it.");
         }
         let dir = utils::append_home_dir(&[".cache", "bingewatcher"]);
+        if !self.name_to_path.is_empty() {
+            if !self.name_to_path.ends_with(".bw") {
+                self.name_to_path+=".bw";
+            }
+            println!("{}", dir.join(&self.name_to_path).to_str().unwrap());
+            return AppMode::MainDoNothing;
+        }
         let mut series: Vec<Serie> = match (!self.add_online.is_empty(), self.only_finished, self.finished)  {
             (_, false, true) |
             (true, _, _) => utils::read_series_dir(&dir,None),
@@ -120,7 +131,7 @@ impl Args {
         } else {
             self.list_series(series, dir);
         }
-        AppMode::ListOrManipulate
+        AppMode::MainDoNothing
     }
 
     #[inline(always)]
@@ -167,6 +178,9 @@ impl Args {
                 if !self.delete_noask {
                     let mut input = String::from("y");
                     eprint!("Do you want to delete \"{}\" [Y/n] ", current_serie.name);
+                    if self.dry_run {
+                        eprint!("(dry-run) ")
+                    }
                     io::stderr().flush().expect("Flushing stdout failed.");
                     io::stdin().read_line(&mut input).expect("Reading input failed");
                     if input.trim() == "n" {
@@ -174,7 +188,9 @@ impl Args {
                     }
                 }
                 let path = &dir.join(current_serie.filename());
-                if !self.dry_run {
+                if self.dry_run {
+                    eprintln!("Deleted {} (dry-run)", path.to_str().unwrap());
+                } else {
                     if let Err(e) = fs::remove_file(path) {
                         eprintln!("ERROR: Couldn't delete {}. Produced the following error:\n{}", path.to_str().unwrap(), e);
                         process::exit(1);
