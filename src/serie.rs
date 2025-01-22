@@ -225,9 +225,9 @@ Next episode: {}
 ",
             self.name,
             self.watched_percentage(),
-            self.next_episode_str(),
             self.total_watched(),
             self.total_episodes(),
+            self.next_episode_str(),
         );
         for (i, season) in self.seasons.iter().enumerate() {
             println!("{}: {}",i+1, season.display());
