@@ -23,7 +23,7 @@ fn main() -> io::Result<()> {
         }
         PrintPath => {
             let path = args.dir.join(&args.name_to_path);
-            if !args.name_to_path.ends_with(".bw") {
+            if args.name_to_path.ends_with(".bw") {
                 println!("{}", path.to_str().unwrap());
             } else {
                 println!("{}.bw", path.to_str().unwrap());
