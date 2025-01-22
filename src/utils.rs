@@ -1,4 +1,4 @@
-use super::Serie;
+use crate::serie::Serie;
 use home::home_dir;
 use clap::Command;
 use clap_complete::{generate, Generator};

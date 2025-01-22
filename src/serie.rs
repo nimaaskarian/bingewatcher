@@ -107,7 +107,7 @@ impl Serie {
     }
 
     #[inline]
-    pub fn write(&self, path: &Path) -> io::Result<()> {
+    pub fn write(&self, path: PathBuf) -> io::Result<()> {
         let mut file = File::create(path)?;
         let self_str: String = self.into();
         write!(file, "{}", self_str)?;
@@ -115,9 +115,9 @@ impl Serie {
     }
 
     #[inline]
-    pub fn write_in_dir(&self, dir: &Path) -> io::Result<()> {
+    pub fn write_in_dir(&self, dir: &PathBuf) -> io::Result<()> {
         let path = dir.join(self.filename());
-        self.write(&path)?;
+        self.write(path)?;
         Ok(())
     }
 

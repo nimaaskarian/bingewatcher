@@ -5,7 +5,10 @@ use clap_complete::Shell;
 use std::{
     cmp::Ordering, fs, io::{self, Write}, path::PathBuf, process
 };
-use crate::{PrintMode, Serie, utils, episodate};
+use crate::{
+    serie::{Serie, PrintMode},
+    utils, episodate,
+};
 //}}}
 
 // Args {{{

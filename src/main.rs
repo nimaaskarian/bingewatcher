@@ -3,13 +3,13 @@
 use std::{
     io, process
 };
-mod utils;
-mod args;
-mod episodate;
-mod serie;
-use serie::{Serie, PrintMode};
-use args::{AppMode::*, Args};
 use clap::{CommandFactory, Parser};
+use bw::{
+    serie::{Serie, PrintMode},
+    args::{AppMode::*, Args},
+    utils,
+    episodate,
+};
 //}}}
 
 fn main() -> io::Result<()> {
