@@ -1,3 +1,5 @@
+// vim:foldmethod=marker
+// imports{{{
 mod season;
 use std::{
     fs::{self, File},
@@ -5,18 +7,24 @@ use std::{
     path::{Path, PathBuf},
     str::FromStr,
 };
-
 use clap::ValueEnum;
 pub use season::Season;
+//}}}
 
 #[derive(Debug, Clone, ValueEnum)]
 pub enum PrintMode {
     Normal,
+    #[value(alias="x")]
     Extended,
+    #[value(alias="e")]
     NextEpisode,
+    #[value(alias="s")]
     Season,
+    #[value(alias="E")]
     Episode,
+    #[value(alias="p")]
     Path,
+    #[value(alias="n")]
     Name,
 }
 
