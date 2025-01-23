@@ -114,19 +114,10 @@ impl Args {
             return AppMode::PrintPath;
         }
         let series = utils::series_dir_reader(&self.dir).expect("Couldn't open dir");
-        // let series = match (!self.add_online.is_empty(), self.only_finished, self.finished)  {
-        //     (false, false, true) |
-        //     std::boo
-        //     (true, _, _) => series.filter(|_| true),
-        //     (_, true, _) => series.filter(Serie::is_finished),
-        //     _ => series.filter(Serie::is_not_finished),
-
-        // };
         if !self.add_online.is_empty() {
             self.add_online(series);
             return AppMode::MainDoNothing;
         }
-
         match self.include {
             Include::NoFinished => self.list_or_manipulate_series(series.filter(Serie::is_not_finished)),
             Include::Finished => self.list_or_manipulate_series(series.filter(Serie::is_finished)),
