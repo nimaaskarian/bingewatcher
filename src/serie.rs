@@ -33,7 +33,7 @@ pub enum PrintMode {
 pub struct Serie {
     seasons: Vec<Season>,
     pub name: String,
-    current_season_index: Option<usize>,
+    current_season: Option<usize>,
 }
 
 #[inline(always)]
@@ -90,7 +90,7 @@ impl Serie {
     pub fn new<S: AsRef<str>>(seasons: Vec<Season>, string_like: S) -> Self {
         let name = string_like.as_ref().to_string();
         Serie {
-            current_season_index: Self::get_current_season_index(&seasons),
+            current_season: seasons.iter().position(Season::is_not_finished),
             seasons,
             name,
         }
@@ -100,13 +100,18 @@ impl Serie {
     pub fn print(&self, print: &PrintMode, dir: Option<&PathBuf>) {
         match print {
             PrintMode::Extended => self.print_extended(),
-            PrintMode::NextEpisode => println!("{}", self.next_episode_str()),
-            PrintMode::Normal => println!("{}", self.display()),
+            PrintMode::NextEpisode => println!("{}", self.next_episode_str().expect("Serie is finished")),
+            PrintMode::Normal => println!("{} {}", self.name, self.next_episode_flat()),
             PrintMode::Season => println!("{}", self.next_season()),
             PrintMode::Episode => println!("{}", self.next_episode()),
             PrintMode::Path => println!("{}", dir.unwrap().join(self.filename()).to_str().unwrap()),
             PrintMode::Name => println!("{}", self.name),
         }
+    }
+
+    #[inline]
+    fn next_episode_flat(&self) -> String {
+        self.next_episode_str().unwrap_or("FINISHED".to_string())
     }
 
     #[inline]
@@ -140,11 +145,6 @@ impl Serie {
     }
 
     #[inline]
-    pub fn exact_matches(&self, search: &str) -> bool {
-        self.name.to_lowercase() == search.to_lowercase()
-    }
-
-    #[inline]
     pub fn is_finished(&self) -> bool {
         if let Some(season) = self.seasons.last() {
             season.episodes == season.watched
@@ -159,23 +159,8 @@ impl Serie {
     }
 
     #[inline]
-    fn get_current_season_index(seasons: &[Season]) -> Option<usize> {
-        for (index, season) in seasons.iter().enumerate() {
-            if !season.is_finished() {
-                return Some(index);
-            }
-        }
-        None
-    }
-
-    #[inline]
-    fn set_current_season(&mut self) {
-        self.current_season_index = Self::get_current_season_index(&self.seasons);
-    }
-
-    #[inline]
     pub fn next_season(&self) -> usize {
-        self.current_season_index.unwrap() + 1
+        self.current_season.map(|i| i+1).unwrap_or(0)
     }
 
     #[inline]
@@ -187,34 +172,21 @@ impl Serie {
     }
 
     #[inline]
-    pub fn next_episode_str(&self) -> String {
-        if self.is_finished() {
-            String::from("FINISHED")
-        } else {
-            match self.current_season() {
-                None => String::new(),
-                Some(season) => {
-                    let episode_width = number_width(season.episodes);
-                    let season_width = number_width(self.seasons.len());
-                    format!(
-                        "S{:0season_width$}E{:0episode_width$}",
-                        self.next_season(),
-                        season.watched + 1
-                    )
-                }
-            }
-        }
+    pub fn next_episode_str(&self) -> Option<String> {
+        let season = self.current_season()?;
+        let episode_width = number_width(season.episodes);
+        let season_width = number_width(self.seasons.len());
+        Some(format!(
+            "S{:0season_width$}E{:0episode_width$}",
+            self.next_season(),
+            season.watched + 1
+        ))
     }
 
     #[inline]
     pub fn current_season(&self) -> Option<&Season> {
-        let index = self.current_season_index?;
+        let index = self.current_season?;
         Some(&self.seasons[index])
-    }
-
-    #[inline]
-    pub fn display(&self) -> String {
-        format!("{} {}", self.name, self.next_episode_str())
     }
 
     #[inline]
@@ -229,17 +201,17 @@ Next episode: {}
             self.watched_percentage(),
             self.total_watched(),
             self.total_episodes(),
-            self.next_episode_str(),
+            self.next_episode_flat(),
         );
-        for (i, season) in self.seasons.iter().enumerate() {
-            println!("{}: {}",i+1, season.display());
+        for (season, i) in self.seasons.iter().zip(1..) {
+            println!("{}: {}",i, season);
         }
     }
 
     #[inline]
     pub fn unwatch(&mut self, count: usize) -> usize {
         let mut unwatch_count = count;
-        let season_index = self.current_season_index;
+        let season_index = self.current_season;
 
         if let Some(mut index) = season_index {
             loop {
@@ -249,7 +221,7 @@ Next episode: {}
                 }
                 index -= 1;
             }
-            self.current_season_index = Some(index);
+            self.current_season = Some(index);
         }
         unwatch_count
     }
@@ -257,16 +229,16 @@ Next episode: {}
     #[inline]
     pub fn watch(&mut self, count: usize) -> usize {
         let mut watch_count = count;
-        if let Some(mut index) = self.current_season_index {
+        if let Some(mut index) = self.current_season {
             while index < self.seasons.len() && watch_count > 0 {
                 watch_count = self.seasons[index].watch(watch_count);
                 index += 1;
             }
-            self.current_season_index = Some(index);
+            self.current_season = Some(index);
             if !self.seasons[index-1].is_finished() {
-                self.current_season_index = Some(index-1);
+                self.current_season = Some(index-1);
             } else if index >= self.seasons.len() {
-                self.current_season_index = None;
+                self.current_season = None;
             }
             
         }
@@ -281,12 +253,6 @@ Next episode: {}
     #[inline]
     pub fn watched_percentage(&self) -> f32 {
         self.total_watched() as f32 / self.total_episodes() as f32 * 100.
-    }
-
-    #[inline]
-    pub fn add(&mut self, season: Season) {
-        self.seasons.push(season);
-        self.set_current_season();
     }
 
     #[inline]
@@ -362,10 +328,10 @@ mod tests {
     }
 
     #[test]
-    fn test_into_string() {
+    fn test_display() {
         let test = get_test_serie();
         let mut buf = BufWriter::new(Vec::new());
-        write!(buf, "{}", test);
+        write!(buf, "{}", test).unwrap();
         let result = String::from_utf8(buf.into_inner().unwrap()).unwrap();
         let expected = "10/20
 0/20";
@@ -373,43 +339,35 @@ mod tests {
     }
 
     #[test]
-    fn test_add() {
-        let mut test = get_test_serie();
-        test.add(Season::new(40));
-        assert_eq!(test.total_episodes(), 80);
-        assert_eq!(test.total_watched(), 10);
-    }
-
-    #[test]
     fn test_watch() {
         let mut test = get_test_serie();
         test.watch(9);
-        assert_eq!(test.current_season_index.unwrap(), 0);
+        assert_eq!(test.current_season.unwrap(), 0);
         test.watch(11);
         assert_eq!(test.total_episodes(), 40);
         assert_eq!(test.total_watched(), 30);
         assert_eq!(test.seasons[0].watched, 20);
         assert_eq!(test.seasons[1].watched, 10);
-        assert_eq!(test.current_season_index.unwrap(), 1);
+        assert_eq!(test.current_season.unwrap(), 1);
         let left = test.watch(20);
         assert_eq!(left, 10);
         let left = test.watch(20);
         assert_eq!(left, 20);
         assert_eq!(test.seasons[1].watched, 20);
-        assert_eq!(test.current_season_index, None);
+        assert_eq!(test.current_season, None);
     }
 
     #[test]
     fn test_watch_edge() {
         let mut test = get_test_serie();
         test.watch(10);
-        assert_eq!(test.next_episode_str().as_str(), "S02E01");
+        assert_eq!(test.next_episode_str().unwrap().as_str(), "S02E01");
         assert_eq!(test.total_watched(), 20);
         test.watch(10);
-        assert_eq!(test.next_episode_str().as_str(), "S02E11");
+        assert_eq!(test.next_episode_str().unwrap().as_str(), "S02E11");
         assert_eq!(test.total_watched(), 30);
         test.watch(10);
-        assert_eq!(test.next_episode_str().as_str(), "FINISHED");
+        assert_eq!(test.next_episode_str(), None);
         assert_eq!(test.total_watched(), 40);
     }
 
@@ -417,10 +375,10 @@ mod tests {
     fn test_unwatch_edge() {
         let mut test = get_test_serie();
         test.watch(10);
-        assert_eq!(test.next_episode_str().as_str(), "S02E01");
+        assert_eq!(test.next_episode_str().unwrap().as_str(), "S02E01");
         assert_eq!(test.total_watched(), 20);
         test.unwatch(20);
-        assert_eq!(test.next_episode_str().as_str(), "S01E01");
+        assert_eq!(test.next_episode_str().unwrap().as_str(), "S01E01");
         assert_eq!(test.total_watched(), 0);
     }
 
@@ -429,16 +387,16 @@ mod tests {
         let mut test = get_test_serie();
         test.watch(20);
         test.unwatch(6);
-        assert_eq!(test.current_season_index.unwrap(), 1);
+        assert_eq!(test.current_season.unwrap(), 1);
 
         assert_eq!(test.total_episodes(), 40);
         assert_eq!(test.total_watched(), 24);
         assert_eq!(test.seasons[0].watched, 20);
         assert_eq!(test.seasons[1].watched, 4);
         test.unwatch(6);
-        assert_eq!(test.current_season_index.unwrap(), 0);
+        assert_eq!(test.current_season.unwrap(), 0);
         test.watch(6);
-        assert_eq!(test.current_season_index.unwrap(), 1);
+        assert_eq!(test.current_season.unwrap(), 1);
         test.unwatch(6);
 
         assert_eq!(test.seasons[0].watched, 18);
@@ -449,15 +407,15 @@ mod tests {
     fn test_next_episode() {
         let mut test = get_test_serie();
         let expected = "S01E11";
-        assert_eq!(test.next_episode_str(), expected);
+        assert_eq!(test.next_episode_str().unwrap(), expected);
 
         test.unwatch(6);
         let expected = "S01E05";
-        assert_eq!(test.next_episode_str(), expected);
+        assert_eq!(test.next_episode_str().unwrap(), expected);
 
         test.watch(6);
         let expected = "S01E11";
-        assert_eq!(test.next_episode_str(), expected);
+        assert_eq!(test.next_episode_str().unwrap(), expected);
     }
 
     #[test]

@@ -53,6 +53,11 @@ impl Season {
     }
 
     #[inline]
+    pub fn is_not_finished(&self) -> bool {
+        !self.is_finished()
+    }
+
+    #[inline]
     pub fn watch(&mut self, count: usize) -> usize {
         let watch_count = count.min(self.not_watched());
         self.watched += watch_count;
@@ -64,10 +69,5 @@ impl Season {
         let unwatch_count = count.min(self.watched);
         self.watched -= unwatch_count;
         count - unwatch_count
-    }
-
-    #[inline]
-    pub fn display(&self) -> String {
-        format!("{}/{}", self.watched, self.episodes)
     }
 }
