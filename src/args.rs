@@ -76,9 +76,9 @@ pub struct Args {
     #[arg(default_value=utils::append_home_dir(&[".cache", "bingewatcher"]).into_os_string())]
     pub dir: PathBuf,
 
-    /// Paths to files to manipulate (overrides the dir option)
+    /// Files to manipulate (overrides --dir and --include)
     #[arg(last=true)]
-    pub paths: Vec<PathBuf>,
+    pub files: Vec<PathBuf>,
 }
 //}}}
 
@@ -105,10 +105,10 @@ macro_rules! do_for_paths_or_dir {
         do_for_paths_or_dir!($self, $func, $series, $func);
     };
     ($self:expr, $func:ident, $series:expr, $pathsfn:ident) => {
-        if $self.paths.is_empty() {
+        if $self.files.is_empty() {
             $self.$func($series)
         } else {
-            let paths = std::mem::take(&mut $self.paths);
+            let paths = std::mem::take(&mut $self.files);
             $self.$pathsfn(paths.iter().flat_map(|entry| Serie::from_file(entry)))
         }
     };
