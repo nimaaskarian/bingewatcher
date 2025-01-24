@@ -12,29 +12,29 @@ fn write(c: &mut Criterion) {
 }
 
 fn read_system_series(c: &mut Criterion) {
-    let mut args = bw::args::Args::parse_from(["";0]);
+    let mut args = bw::args::Args::parse_from(&[""]);
     c.bench_function("read system series", |b| b.iter(||{
         black_box(&mut args).app_mode()
     }));
 }
 
 fn read_system_series_finished(c: &mut Criterion) {
-    let mut args = bw::args::Args::parse_from(["-i f"]);
+    let mut args = bw::args::Args::parse_from(["","-i","f"]);
     c.bench_function("read system series finished", |b| b.iter(||{
         black_box(&mut args).app_mode()
     }));
 }
 
 fn read_system_series_all(c: &mut Criterion) {
-    let mut args = bw::args::Args::parse_from(["-i a"]);
+    let mut args = bw::args::Args::parse_from(["","-i", "a"]);
     c.bench_function("read system series all", |b| b.iter(||{
         black_box(&mut args).app_mode()
     }));
 }
 
 fn search_system_series(c: &mut Criterion) {
-    let mut args = bw::args::Args::parse_from(["-s invincible"]);
-    c.bench_function("read system series all", |b| b.iter(||{
+    let mut args = bw::args::Args::parse_from(["","-s", "invincible"]);
+    c.bench_function("search system series", |b| b.iter(||{
         black_box(&mut args).app_mode()
     }));
 }
