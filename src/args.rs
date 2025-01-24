@@ -75,6 +75,10 @@ pub struct Args {
     /// Path to todo file (and notes sibling directory)
     #[arg(default_value=utils::append_home_dir(&[".cache", "bingewatcher"]).into_os_string())]
     pub dir: PathBuf,
+
+    /// Paths to files to manipulate (overrides the dir option)
+    #[arg(last=true)]
+    pub paths: Vec<PathBuf>,
 }
 //}}}
 
@@ -96,6 +100,20 @@ pub enum AppMode {
     MainDoNothing,
 }
 
+macro_rules! do_for_paths_or_dir {
+    ($self:expr, $func:ident, $series:expr) => {
+        do_for_paths_or_dir!($self, $func, $series, $func);
+    };
+    ($self:expr, $func:ident, $series:expr, $pathsfn:ident) => {
+        if $self.paths.is_empty() {
+            $self.$func($series)
+        } else {
+            let paths = std::mem::take(&mut $self.paths);
+            $self.$pathsfn(paths.iter().flat_map(|entry| Serie::from_file(entry)))
+        }
+    };
+}
+
 impl Args {
     pub fn app_mode(&mut self) -> AppMode {
         if let Some(generator) = self.completion {
@@ -114,23 +132,23 @@ impl Args {
             return AppMode::PrintPath;
         }
         let series = utils::series_dir_reader(&self.dir).expect("Couldn't open dir");
+
         if !self.add_online.is_empty() {
-            self.add_online(series);
+            do_for_paths_or_dir!(self,add_online,series);
             return AppMode::MainDoNothing;
         }
         match self.include {
-            Include::NoFinished => self.list_or_manipulate_series(series.filter(Serie::is_not_finished)),
-            Include::Finished => self.list_or_manipulate_series(series.filter(Serie::is_finished)),
-            Include::All => self.list_or_manipulate_series(series),
+            Include::NoFinished => do_for_paths_or_dir!(self,list_or_manipulate_series,series.filter(Serie::is_not_finished),manipulate_series),
+            Include::Finished => do_for_paths_or_dir!(self,list_or_manipulate_series,series.filter(Serie::is_finished),manipulate_series),
+            Include::All => do_for_paths_or_dir!(self,list_or_manipulate_series,series,manipulate_series),
         }
         AppMode::MainDoNothing
     }
-
     
     #[inline(always)]
     fn list_or_manipulate_series(&self, series: impl Iterator<Item = Serie>) {
         if !self.search.is_empty() {
-            self.manipulate_series(series)
+            self.manipulate_series(series.filter(|s| s.matches(&self.search)))
         } else {
             self.list_series(series)
         }
@@ -160,7 +178,7 @@ impl Args {
 
     #[inline(always)]
     fn manipulate_series(&self, series: impl Iterator<Item = Serie>) {
-        for mut serie in series.filter(|s| s.matches(&self.search)) {
+        for mut serie in series {
             match self.watch.cmp(&self.unwatch) {
                 Ordering::Less => {
                     let unwatch_count = self.unwatch-self.watch;

@@ -23,6 +23,13 @@ pub fn series_dir_reader(dir: &Path)
     Ok(dir.flat_map(|entry| Serie::from_file(&entry.expect("File error").path())))
 }
 
+// pub fn series_paths_reader<'a>(dir: &'a[PathBuf]) -> FlatMap<std::slice::Iter<'a, PathBuf>, Option<Serie>, impl FnMut(&PathBuf) -> Option<Serie>>
+// {
+//     // let _ = std::fs::create_dir_all(dir);
+//     // let dir = fs::read_dir(dir)?;
+//     dir.iter().flat_map(|entry| Serie::from_file(&entry))
+// }
+
 pub fn print_completions<G: Generator>(gen: G, cmd: &mut Command) {
     generate(gen, cmd, cmd.get_name().to_string(), &mut io::stdout());
 }

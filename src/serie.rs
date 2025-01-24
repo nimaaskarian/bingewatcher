@@ -52,11 +52,8 @@ fn number_width(mut number: usize) -> usize {
 
 impl fmt::Display for Serie {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        for season in &self.seasons[..self.seasons.len()-1] {
+        for season in &self.seasons {
             writeln!(f, "{}", season)?;
-        }
-        if let Some(season) = self.seasons.last() {
-            write!(f, "{}", season)?;
         }
         Ok(())
     }
@@ -334,7 +331,8 @@ mod tests {
         write!(buf, "{}", test).unwrap();
         let result = String::from_utf8(buf.into_inner().unwrap()).unwrap();
         let expected = "10/20
-0/20";
+0/20
+";
         assert_eq!(result, expected);
     }
 
