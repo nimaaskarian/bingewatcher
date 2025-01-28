@@ -72,12 +72,12 @@ pub struct Args {
     #[arg(long, default_value_t=String::new())]
     pub name_to_path: String,
 
-    /// Path to todo file (and notes sibling directory)
-    #[arg(default_value=utils::append_home_dir(&[".cache", "bingewatcher"]).into_os_string())]
-    pub dir: PathBuf,
+    /// Read all series from a directory
+    #[arg(long, short, default_value=utils::append_home_dir(&[".cache", "bingewatcher"]).into_os_string())]
+    pub directory: PathBuf,
 
     /// Files to manipulate (overrides --dir and --include)
-    #[arg(last=true)]
+    #[arg()]
     pub files: Vec<PathBuf>,
 }
 //}}}
@@ -108,8 +108,8 @@ macro_rules! do_for_paths_or_dir {
         if $self.files.is_empty() {
             $self.$func($series)
         } else {
-            let paths = std::mem::take(&mut $self.files);
-            $self.$pathsfn(paths.iter().flat_map(|entry| Serie::from_file(entry)))
+            let mut paths = std::mem::take(&mut $self.files);
+            $self.$pathsfn(paths.iter_mut().flat_map(|entry| Serie::from_file(entry).map(|serie| (serie, std::mem::take(entry)))))
         }
     };
 }
@@ -131,24 +131,24 @@ impl Args {
         if !self.name_to_path.is_empty() {
             return AppMode::PrintPath;
         }
-        let series = utils::series_dir_reader(&self.dir).expect("Couldn't open dir");
+        let series = utils::series_dir_reader(&self.directory).expect("Couldn't open dir");
 
         if !self.add_online.is_empty() {
             do_for_paths_or_dir!(self,add_online,series);
             return AppMode::MainDoNothing;
         }
         match self.include {
-            Include::NoFinished => do_for_paths_or_dir!(self,list_or_manipulate_series,series.filter(Serie::is_not_finished),manipulate_series),
-            Include::Finished => do_for_paths_or_dir!(self,list_or_manipulate_series,series.filter(Serie::is_finished),manipulate_series),
+            Include::NoFinished => do_for_paths_or_dir!(self,list_or_manipulate_series,series.filter(|s_p|s_p.0.is_not_finished()),manipulate_series),
+            Include::Finished => do_for_paths_or_dir!(self,list_or_manipulate_series,series.filter(|s_p|s_p.0.is_finished()),manipulate_series),
             Include::All => do_for_paths_or_dir!(self,list_or_manipulate_series,series,manipulate_series),
         }
         AppMode::MainDoNothing
     }
     
     #[inline(always)]
-    fn list_or_manipulate_series(&self, series: impl Iterator<Item = Serie>) {
+    fn list_or_manipulate_series(&self, series: impl Iterator<Item = (Serie, PathBuf)>) {
         if !self.search.is_empty() {
-            self.manipulate_series(series.filter(|s| s.matches(&self.search)))
+            self.manipulate_series(series.filter(|s_p| s_p.0.matches(&self.search)))
         } else {
             self.list_series(series)
         }
@@ -156,29 +156,29 @@ impl Args {
     }
 
     #[inline(always)]
-    fn add_online(&mut self, mut series: impl Iterator<Item = Serie>) {
+    fn add_online(&mut self, mut series: impl Iterator<Item = (Serie, PathBuf)>) {
         let serie = episodate::request_detail(&self.add_online);
-        if let Some(mut old_serie) = series.find(|s| s.name == serie.name)  {
+        if let Some((mut old_serie, path)) = series.find(|s_p| s_p.0.name == serie.name)  {
             if self.update_online {
                 eprintln!("The serie \"{}\" already exists. Updating it...", serie.name);
                 old_serie.merge_serie(&serie);
                 if !self.dry_run {
-                    old_serie.write_in_dir(&self.dir);
-                    old_serie.print(&self.print_mode, Some(&self.dir))
+                    old_serie.write(path);
+                    old_serie.print(&self.print_mode, Some(&self.directory))
                 }
             } else {
                 eprintln!("ERROR: The serie \"{}\" already exists.", serie.name);
                 process::exit(1);
             }
         } else {
-            serie.write_in_dir(&self.dir);
-            serie.print(&self.print_mode, Some(&self.dir))
+            serie.write_in_dir(&self.directory);
+            serie.print(&self.print_mode, Some(&self.directory))
         }
     }
 
     #[inline(always)]
-    fn manipulate_series(&self, series: impl Iterator<Item = Serie>) {
-        for mut serie in series {
+    fn manipulate_series(&self, series: impl Iterator<Item = (Serie, PathBuf)>) {
+        for (mut serie, path) in series {
             match self.watch.cmp(&self.unwatch) {
                 Ordering::Less => {
                     let unwatch_count = self.unwatch-self.watch;
@@ -192,9 +192,9 @@ impl Args {
                 }
                 Ordering::Equal => { }
             }
-            serie.print(&self.print_mode, Some(&self.dir));
+            serie.print(&self.print_mode, Some(&self.directory));
             if !self.dry_run {
-                serie.write_in_dir(&self.dir).expect("Write failed");
+                serie.write(path).expect("Write failed");
             }
             if self.delete || self.delete_noask {
                 if !self.delete_noask {
@@ -209,7 +209,7 @@ impl Args {
                         continue;
                     }
                 }
-                let path = &self.dir.join(serie.filename());
+                let path = &self.directory.join(serie.filename());
                 if self.dry_run {
                     eprintln!("Deleted {} (dry-run)", path.to_str().unwrap());
                 } else if let Err(e) = fs::remove_file(path) {
@@ -223,9 +223,9 @@ impl Args {
     }
 
     #[inline(always)]
-    fn list_series(&self, series: impl Iterator<Item = Serie>) {
-        for serie in series {
-            serie.print(&self.print_mode, Some(&self.dir));
+    fn list_series(&self, series: impl Iterator<Item = (Serie, PathBuf)>) {
+        for (serie, _) in series {
+            serie.print(&self.print_mode, Some(&self.directory));
         }
     }
 }

@@ -22,7 +22,7 @@ fn main() -> io::Result<()> {
             episodate::search_write_to_stdout(args.search_online);
         }
         PrintPath => {
-            let path = args.dir.join(&args.name_to_path);
+            let path = args.directory.join(&args.name_to_path);
             if args.name_to_path.ends_with(".bw") {
                 println!("{}", path.to_str().unwrap());
             } else {

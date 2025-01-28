@@ -39,5 +39,13 @@ fn search_system_series(c: &mut Criterion) {
     }));
 }
 
-criterion_group!(benches,write, read_system_series, read_system_series_finished, read_system_series_all, search_system_series);
+fn path_system_series(c: &mut Criterion) {
+    let mut args = bw::args::Args::parse_from(["bw","/home/nima/.cache/bingewatcher/Rick and Morty.bw"]);
+    assert!(!args.files.is_empty());
+    c.bench_function("path system series", |b| b.iter(||{
+        black_box(&mut args).app_mode()
+    }));
+}
+
+criterion_group!(benches,write, read_system_series, read_system_series_finished, read_system_series_all, search_system_series, path_system_series);
 criterion_main!(benches);
