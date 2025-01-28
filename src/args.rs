@@ -72,8 +72,8 @@ pub struct Args {
     #[arg(long, default_value_t=String::new())]
     pub name_to_path: String,
 
-    /// Read all series from a directory
-    #[arg(long, short, default_value=utils::append_home_dir(&[".cache", "bingewatcher"]).into_os_string())]
+    /// Read all series from a directory (respects the BW_DIR variable)
+    #[arg(long, short, default_value=std::env::var_os("BW_DIR").unwrap_or(utils::append_home_dir(&[".cache", "bingewatcher"]).into_os_string()))]
     pub directory: PathBuf,
 
     /// Files to manipulate (overrides --directory and --include)
