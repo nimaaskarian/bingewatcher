@@ -27,6 +27,8 @@ pub enum PrintMode {
     Path,
     #[value(alias="n")]
     Name,
+    #[value(alias="c")]
+    Content,
 }
 
 #[derive(Debug, Default, PartialEq)]
@@ -99,12 +101,13 @@ impl Serie {
     pub fn print(&self, print: &PrintMode, path: Option<&PathBuf>) {
         match print {
             PrintMode::Extended => self.print_extended(),
-            PrintMode::NextEpisode => eprintln!("{}", self.next_episode_str().expect("Serie is finished")),
-            PrintMode::Normal => eprintln!("{} {}", self.name, self.next_episode_flat()),
-            PrintMode::Season => eprintln!("{}", self.next_season()),
-            PrintMode::Episode => eprintln!("{}", self.next_episode()),
-            PrintMode::Path => eprintln!("{}", path.unwrap().to_str().unwrap()),
-            PrintMode::Name => eprintln!("{}", self.name),
+            PrintMode::NextEpisode => println!("{}", self.next_episode_str().expect("Serie is finished")),
+            PrintMode::Normal => println!("{} {}", self.name, self.next_episode_flat()),
+            PrintMode::Season => println!("{}", self.next_season()),
+            PrintMode::Episode => println!("{}", self.next_episode()),
+            PrintMode::Path => println!("{}", path.unwrap().to_str().unwrap()),
+            PrintMode::Name => println!("{}", self.name),
+            PrintMode::Content => println!("{self}"),
         }
     }
 
@@ -183,7 +186,7 @@ impl Serie {
 
     #[inline]
     pub fn print_extended(&self) {
-        eprintln!(
+        println!(
             "Name: {}
 Percentage: {:.2}%
 Watched/Total: {}/{}
@@ -196,7 +199,7 @@ Next episode: {}
             self.next_episode_flat(),
         );
         for (season, i) in self.seasons.iter().zip(1..) {
-            eprintln!("{}: {}",i, season);
+            println!("{}: {}",i, season);
         }
     }
 

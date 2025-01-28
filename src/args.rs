@@ -15,7 +15,7 @@ use crate::{
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
 pub struct Args {
-    /// Search a query among the series
+    /// Search a query among the series and select matching ("*" matches all the series)
     #[arg(short, long, default_value_t=String::new())]
     pub search: String,
 
@@ -148,7 +148,11 @@ impl Args {
     #[inline(always)]
     fn list_or_manipulate_series(&self, series: impl Iterator<Item = (Serie, PathBuf)>) {
         if !self.search.is_empty() {
-            self.manipulate_series(series.filter(|s_p| s_p.0.matches(&self.search)))
+            if self.search == "*" {
+                self.manipulate_series(series)
+            } else {
+                self.manipulate_series(series.filter(|s_p| s_p.0.matches(&self.search)))
+            }
         } else {
             self.list_series(series)
         }
@@ -171,16 +175,13 @@ impl Args {
                 process::exit(1);
             }
         } else {
-            if self.files.is_empty() {
+            if series.next().is_none() {
+                eprintln!("WARNING: Can't detect the file to write on. Writing on stdout...");
+                serie.print(&PrintMode::Content, None);
+            } else {
                 let path = self.directory.join(serie.filename());
                 serie.print(&self.print_mode, Some(&path));
                 serie.write(path);
-
-            } else {
-                eprintln!("WARNING: Can't detect the file to write on. writing on stdout...");
-                write!(io::stdout(), "{serie}");
-                serie.print(&self.print_mode, None);
-
             }
         }
     }
@@ -202,6 +203,7 @@ impl Args {
                 Ordering::Equal => { }
             }
             serie.print(&self.print_mode, Some(&path));
+            let mut write = !self.dry_run;
             if self.delete || self.delete_noask {
                 if !self.delete_noask {
                     let mut input = String::from("y");
@@ -212,12 +214,10 @@ impl Args {
                     io::stderr().flush().expect("Flushing stdout failed.");
                     io::stdin().read_line(&mut input).expect("Reading input failed");
                     if input.trim() == "n" {
-                        if !self.dry_run {
-                            serie.write(path).expect("Write failed");
-                        }
                         continue;
                     }
                 }
+                write = false;
                 if self.dry_run {
                     eprintln!("Deleted {} (dry-run)", path.to_str().unwrap());
                 } else if let Err(e) = fs::remove_file(&path) {
@@ -226,10 +226,9 @@ impl Args {
                 } else {
                     eprintln!("Deleted {}", path.to_str().unwrap());
                 }
-            } else {
-                if !self.dry_run {
-                    serie.write(path).expect("Write failed");
-                }
+            }
+            if write {
+                serie.write(path).expect("Write failed");
             }
         }
     }
