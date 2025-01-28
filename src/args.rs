@@ -126,7 +126,7 @@ impl Args {
             return AppMode::DetailOnline
         }
         if self.update_online && self.add_online.is_empty() {
-            eprintln!("Warning: you used update-online with no add-online. Ignoring it.");
+            eprintln!("WARNING: you used update-online with no add-online. Ignoring it.");
         }
         if !self.name_to_path.is_empty() {
             return AppMode::PrintPath;
@@ -160,19 +160,28 @@ impl Args {
         let serie = episodate::request_detail(&self.add_online);
         if let Some((mut old_serie, path)) = series.find(|s_p| s_p.0.name == serie.name)  {
             if self.update_online {
-                eprintln!("The serie \"{}\" already exists. Updating it...", serie.name);
+                eprintln!("INFO: The serie \"{}\" already exists. Updating it...", serie.name);
                 old_serie.merge_serie(&serie);
                 if !self.dry_run {
+                    old_serie.print(&self.print_mode, Some(&path));
                     old_serie.write(path);
-                    old_serie.print(&self.print_mode, Some(&self.directory))
                 }
             } else {
                 eprintln!("ERROR: The serie \"{}\" already exists.", serie.name);
                 process::exit(1);
             }
         } else {
-            serie.write_in_dir(&self.directory);
-            serie.print(&self.print_mode, Some(&self.directory))
+            if self.files.is_empty() {
+                let path = self.directory.join(serie.filename());
+                serie.print(&self.print_mode, Some(&path));
+                serie.write(path);
+
+            } else {
+                eprintln!("WARNING: Can't detect the file to write on. writing on stdout...");
+                write!(io::stdout(), "{serie}");
+                serie.print(&self.print_mode, None);
+
+            }
         }
     }
 
@@ -183,19 +192,16 @@ impl Args {
                 Ordering::Less => {
                     let unwatch_count = self.unwatch-self.watch;
                     serie.unwatch(unwatch_count);
-                    println!("Unwatched {} episode(s) from {}.",serie.name, unwatch_count);
+                    eprintln!("Unwatched {} episode(s) from {}.",serie.name, unwatch_count);
                 }
                 Ordering::Greater => {
                     serie.watch(self.watch-self.unwatch);
                     let watched_count = self.watch-self.unwatch;
-                    println!("Watched {watched_count} episode(s) from {}.", serie.name);
+                    eprintln!("Watched {watched_count} episode(s) from {}.", serie.name);
                 }
                 Ordering::Equal => { }
             }
-            serie.print(&self.print_mode, Some(&self.directory));
-            if !self.dry_run {
-                serie.write(path).expect("Write failed");
-            }
+            serie.print(&self.print_mode, Some(&path));
             if self.delete || self.delete_noask {
                 if !self.delete_noask {
                     let mut input = String::from("y");
@@ -206,17 +212,23 @@ impl Args {
                     io::stderr().flush().expect("Flushing stdout failed.");
                     io::stdin().read_line(&mut input).expect("Reading input failed");
                     if input.trim() == "n" {
+                        if !self.dry_run {
+                            serie.write(path).expect("Write failed");
+                        }
                         continue;
                     }
                 }
-                let path = &self.directory.join(serie.filename());
                 if self.dry_run {
                     eprintln!("Deleted {} (dry-run)", path.to_str().unwrap());
-                } else if let Err(e) = fs::remove_file(path) {
+                } else if let Err(e) = fs::remove_file(&path) {
                     eprintln!("ERROR: Couldn't delete {}. Produced the following error:\n{}", path.to_str().unwrap(), e);
                     process::exit(1);
                 } else {
                     eprintln!("Deleted {}", path.to_str().unwrap());
+                }
+            } else {
+                if !self.dry_run {
+                    serie.write(path).expect("Write failed");
                 }
             }
         }
@@ -224,8 +236,8 @@ impl Args {
 
     #[inline(always)]
     fn list_series(&self, series: impl Iterator<Item = (Serie, PathBuf)>) {
-        for (serie, _) in series {
-            serie.print(&self.print_mode, Some(&self.directory));
+        for (serie, path) in series {
+            serie.print(&self.print_mode, Some(&path));
         }
     }
 }

@@ -72,8 +72,10 @@ impl FromStr for Serie {
         let mut seasons = Vec::with_capacity(value.lines().count());
         for line in value.lines() {
             match line.parse() {
-                Err(_) => return Err(SerieParseError::ParseFailed),
                 Ok(season) => seasons.push(season),
+                Err(season::SeasonError::MalformedSeason) => return Err(SerieParseError::ParseFailed),
+                // ignore empty lines
+                Err(season::SeasonError::EmptySeason) => {}
             }
         }
         if seasons.is_empty() {
@@ -94,15 +96,15 @@ impl Serie {
     }
 
     #[inline]
-    pub fn print(&self, print: &PrintMode, dir: Option<&PathBuf>) {
+    pub fn print(&self, print: &PrintMode, path: Option<&PathBuf>) {
         match print {
             PrintMode::Extended => self.print_extended(),
-            PrintMode::NextEpisode => println!("{}", self.next_episode_str().expect("Serie is finished")),
-            PrintMode::Normal => println!("{} {}", self.name, self.next_episode_flat()),
-            PrintMode::Season => println!("{}", self.next_season()),
-            PrintMode::Episode => println!("{}", self.next_episode()),
-            PrintMode::Path => println!("{}", dir.unwrap().join(self.filename()).to_str().unwrap()),
-            PrintMode::Name => println!("{}", self.name),
+            PrintMode::NextEpisode => eprintln!("{}", self.next_episode_str().expect("Serie is finished")),
+            PrintMode::Normal => eprintln!("{} {}", self.name, self.next_episode_flat()),
+            PrintMode::Season => eprintln!("{}", self.next_season()),
+            PrintMode::Episode => eprintln!("{}", self.next_episode()),
+            PrintMode::Path => eprintln!("{}", path.unwrap().to_str().unwrap()),
+            PrintMode::Name => eprintln!("{}", self.name),
         }
     }
 
@@ -115,13 +117,6 @@ impl Serie {
     pub fn write(&self, path: PathBuf) -> io::Result<()> {
         let mut file = File::create(path)?;
         write!(file, "{}", self)?;
-        Ok(())
-    }
-
-    #[inline]
-    pub fn write_in_dir(&self, dir: &Path) -> io::Result<()> {
-        let path = dir.join(self.filename());
-        self.write(path)?;
         Ok(())
     }
 
@@ -188,7 +183,7 @@ impl Serie {
 
     #[inline]
     pub fn print_extended(&self) {
-        println!(
+        eprintln!(
             "Name: {}
 Percentage: {:.2}%
 Watched/Total: {}/{}
@@ -201,7 +196,7 @@ Next episode: {}
             self.next_episode_flat(),
         );
         for (season, i) in self.seasons.iter().zip(1..) {
-            println!("{}: {}",i, season);
+            eprintln!("{}: {}",i, season);
         }
     }
 

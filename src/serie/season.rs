@@ -7,11 +7,17 @@ pub struct Season {
     pub watched: usize,
 }
 
-pub struct MalformedSeason;
+pub enum SeasonError {
+    MalformedSeason,
+    EmptySeason,
+}
 
 impl FromStr for Season {
-    type Err = MalformedSeason;
+    type Err = SeasonError;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
+        if s.is_empty() {
+            return Err(SeasonError::EmptySeason)
+        }
         let sep_index = s.chars().position(|c| c == '/');
         if let Some(index) = sep_index {
             let watched = s[..index].parse();
@@ -23,7 +29,7 @@ impl FromStr for Season {
                 })
             }
         }
-        Err(MalformedSeason)
+        Err(SeasonError::MalformedSeason)
     }
 }
 
