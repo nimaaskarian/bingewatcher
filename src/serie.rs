@@ -208,18 +208,16 @@ Next episode: {}
     #[inline]
     pub fn unwatch(&mut self, count: usize) -> usize {
         let mut unwatch_count = count;
-        let season_index = self.current_season;
+        let mut index = self.current_season.unwrap_or(self.seasons.len()-1);
 
-        if let Some(mut index) = season_index {
-            loop {
-                unwatch_count = self.seasons[index].unwatch(unwatch_count);
-                if unwatch_count == 0 || index == 0 {
-                    break;
-                }
-                index -= 1;
+        loop {
+            unwatch_count = self.seasons[index].unwatch(unwatch_count);
+            if unwatch_count == 0 || index == 0 {
+                break;
             }
-            self.current_season = Some(index);
+            index -= 1;
         }
+        self.current_season = Some(index);
         unwatch_count
     }
 
@@ -379,6 +377,17 @@ mod tests {
         assert_eq!(test.next_episode_str().unwrap().as_str(), "S01E01");
         assert_eq!(test.total_watched(), 0);
     }
+
+    #[test]
+    fn test_unwatch_finished() {
+        let mut test = get_test_serie();
+        test.watch(30);
+        assert!(test.is_finished());
+        test.unwatch(20);
+        assert_eq!(test.next_episode_str().unwrap().as_str(), "S02E01");
+        assert_eq!(test.total_watched(), 20);
+    }
+
 
     #[test]
     fn test_unwatch() {

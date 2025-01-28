@@ -76,7 +76,7 @@ pub struct Args {
     #[arg(long, short, default_value=utils::append_home_dir(&[".cache", "bingewatcher"]).into_os_string())]
     pub directory: PathBuf,
 
-    /// Files to manipulate (overrides --dir and --include)
+    /// Files to manipulate (overrides --directory and --include)
     #[arg()]
     pub files: Vec<PathBuf>,
 }
