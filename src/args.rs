@@ -106,10 +106,10 @@ macro_rules! do_for_paths_or_dir {
     };
     ($self:expr, $func:ident, $series:expr, $pathsfn:ident) => {
         if $self.files.is_empty() {
-            $self.$func($series)
+            $self.$func($series, true)
         } else {
             let mut paths = std::mem::take(&mut $self.files);
-            $self.$pathsfn(paths.iter_mut().flat_map(|entry| Serie::from_file(entry).map(|serie| (serie, std::mem::take(entry)))))
+            $self.$pathsfn(paths.iter_mut().flat_map(|entry| Serie::from_file(entry).map(|serie| (serie, std::mem::take(entry)))), false)
         }
     };
 }
@@ -146,12 +146,12 @@ impl Args {
     }
     
     #[inline(always)]
-    fn list_or_manipulate_series(&self, series: impl Iterator<Item = (Serie, PathBuf)>) {
+    fn list_or_manipulate_series(&self, series: impl Iterator<Item = (Serie, PathBuf)>, no_paths: bool) {
         if !self.search.is_empty() {
             if self.search == "*" {
-                self.manipulate_series(series)
+                self.manipulate_series(series, no_paths)
             } else {
-                self.manipulate_series(series.filter(|s_p| s_p.0.matches(&self.search)))
+                self.manipulate_series(series.filter(|s_p| s_p.0.matches(&self.search)), no_paths)
             }
         } else {
             self.list_series(series)
@@ -160,7 +160,7 @@ impl Args {
     }
 
     #[inline(always)]
-    fn add_online(&mut self, mut series: impl Iterator<Item = (Serie, PathBuf)>) {
+    fn add_online(&mut self, mut series: impl Iterator<Item = (Serie, PathBuf)>, no_paths: bool) {
         let serie = episodate::request_detail(&self.add_online);
         if let Some((mut old_serie, path)) = series.find(|s_p| s_p.0.name == serie.name)  {
             if self.update_online {
@@ -175,25 +175,25 @@ impl Args {
                 process::exit(1);
             }
         } else {
-            if series.next().is_none() {
-                eprintln!("WARNING: Can't detect the file to write on. Writing on stdout...");
-                serie.print(&PrintMode::Content, None);
-            } else {
+            if no_paths {
                 let path = self.directory.join(serie.filename());
                 serie.print(&self.print_mode, Some(&path));
                 serie.write(path);
+            } else {
+                eprintln!("WARNING: Can't detect the file to write on. Writing on stdout...");
+                serie.print(&PrintMode::Content, None);
             }
         }
     }
 
     #[inline(always)]
-    fn manipulate_series(&self, series: impl Iterator<Item = (Serie, PathBuf)>) {
+    fn manipulate_series(&self, series: impl Iterator<Item = (Serie, PathBuf)>, _no_paths: bool) {
         for (mut serie, path) in series {
             match self.watch.cmp(&self.unwatch) {
                 Ordering::Less => {
                     let unwatch_count = self.unwatch-self.watch;
                     serie.unwatch(unwatch_count);
-                    eprintln!("Unwatched {} episode(s) from {}.",serie.name, unwatch_count);
+                    eprintln!("Unwatched {unwatch_count} episode(s) from {}.",serie.name);
                 }
                 Ordering::Greater => {
                     serie.watch(self.watch-self.unwatch);
