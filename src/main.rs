@@ -1,13 +1,10 @@
 // vim:foldmethod=marker
 // imports{{{
 use std::{
-    io, process, mem
+    io
 };
 use clap::{CommandFactory, Parser};
 use bw::{
-    serie::PrintMode,
-    utils,
-    episodate,
     args::{Args, Commands::*, OnlineCommands::*},
 };
 

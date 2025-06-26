@@ -1,14 +1,19 @@
 // vim:foldmethod=marker
 // imports{{{
-use std::mem;
-use clap::{Parser, ValueEnum, Subcommand, CommandFactory};
-use clap_complete::Shell;
-use std::{
-    cmp::Ordering, fs, io::{self, Write}, path::PathBuf, process
-};
 use crate::{
-    serie::{Serie, PrintMode},
-    utils, episodate,
+    episodate,
+    serie::{PrintMode, Serie},
+    utils,
+};
+use clap::{CommandFactory, Parser, Subcommand, ValueEnum};
+use clap_complete::Shell;
+use std::mem;
+use std::{
+    cmp::Ordering,
+    fs,
+    io::{self, Write},
+    path::PathBuf,
+    process,
 };
 //}}}
 
@@ -21,11 +26,11 @@ pub struct Args {
     pub search: String,
 
     /// Print current season of selected series
-    #[arg(short = 'p', long, default_value="normal")]
+    #[arg(short = 'p', long, default_value = "normal")]
     pub print_mode: PrintMode,
 
     /// Whether to include finished shows in searchs or not
-    #[arg(short, long, default_value="no-finished")]
+    #[arg(short, long, default_value = "no-finished")]
     include: Include,
 
     /// Print shell completion
@@ -33,9 +38,9 @@ pub struct Args {
     pub command: Option<Commands>,
 
     /// Perform a trial run with no changes made
-    #[arg(short='n', long)]
+    #[arg(short = 'n', long)]
     pub dry_run: bool,
-    
+
     /// Read all series from a directory (respects the BW_DIR variable)
     #[arg(long, short, default_value=std::env::var_os("BW_DIR").unwrap_or(utils::append_home_dir(&[".cache", "bingewatcher"]).into_os_string()))]
     pub directory: PathBuf,
@@ -50,12 +55,10 @@ pub struct Args {
 #[derive(Subcommand, Debug)]
 pub enum Commands {
     /// Delete selected series
-    #[command(alias="ls")]
-    List {
-    },
+    #[command(alias = "ls")]
+    List {},
     /// Delete selected series
     Delete {
-
         /// Force delete selected series without asking for confirmation
         #[arg(short = 'f', long, default_value_t = false)]
         force: bool,
@@ -73,7 +76,7 @@ pub enum Commands {
     /// Generate shell completions
     Completions {
         #[arg(value_enum)]
-        shell: Shell
+        shell: Shell,
     },
     /// Fetching series, from episodate API
     Episodate {
@@ -98,25 +101,25 @@ pub enum OnlineCommands {
     /// Add a series from online source (needs internet)
     Add {
         #[arg()]
-        name: String,
+        names: Vec<String>,
         /// Whether to update existing serie or not
         #[arg(short, long)]
-        update: bool
+        update: bool,
     },
     /// Print details of an online show, without adding it
     Detail {
         #[arg()]
-        name: String,
+        names: Vec<String>,
     },
 }
 
 #[derive(Debug, Clone, ValueEnum)]
 enum Include {
-    #[value(alias="n")]
+    #[value(alias = "n")]
     NoFinished,
-    #[value(alias="a")]
+    #[value(alias = "a")]
     All,
-    #[value(alias="f")]
+    #[value(alias = "f")]
     Finished,
 }
 
@@ -149,40 +152,52 @@ impl Args {
         let files_empty = self.files.is_empty();
 
         match self.command {
-            Some(Commands::Completions {shell}) => {
+            Some(Commands::Completions { shell }) => {
                 utils::print_completions(shell, &mut Args::command());
                 return;
             }
-            Some(Commands::Episodate {ref command}) => {
-                match command {
-                    OnlineCommands::Search {ref query} => {
-                        episodate::search_write_to_stdout(query);
-                    },
-                    OnlineCommands::Add {name, update} => {
-                        call_series!(self, series, add_online, files_empty, name.clone(), *update);
-                    },
-                    OnlineCommands::Detail {name} => {
+            Some(Commands::Episodate { ref mut command }) => match command {
+                OnlineCommands::Search { ref query } => {
+                    episodate::search_write_to_stdout(query);
+                }
+                OnlineCommands::Add {
+                    ref mut names,
+                    update,
+                } => {
+                    let names = mem::take(names);
+                    let update = *update;
+                    call_series!(
+                        self,
+                        series,
+                        add_online,
+                        episodate::request_detail,
+                        names,
+                        update,
+                        files_empty
+                    );
+                }
+                OnlineCommands::Detail { names } => {
+                    for name in names {
                         let serie = episodate::request_detail(&name);
                         serie.print(&PrintMode::Extended, None);
-                    },
+                    }
                 }
             },
-            Some(Commands::Delete {force}) => {
+            Some(Commands::Delete { force }) => {
                 call_series!(self, series, delete_series, force);
-            },
-            Some(Commands::Watch {count}) => {
+            }
+            Some(Commands::Watch { count }) => {
                 call_series!(self, series, watch_series, count);
-            },
-            Some(Commands::Unwatch {count}) => {
+            }
+            Some(Commands::Unwatch { count }) => {
                 call_series!(self, series, unwatch_series, count);
-            },
-            Some(Commands::Wikipedia {..}) => todo!(),
-            None | Some(Commands::List {}) => {
-            },
+            }
+            Some(Commands::Wikipedia { .. }) => todo!(),
+            None | Some(Commands::List {}) => {}
         }
         call_series!(self, series, list_series);
     }
-    
+
     #[inline(always)]
     fn list_or_manipulate_series(&self, series: impl Iterator<Item = (Serie, PathBuf)>) {
         if !self.search.is_empty() {
@@ -194,32 +209,43 @@ impl Args {
         } else {
             self.list_series(series)
         }
-
     }
 
     #[inline(always)]
-    pub fn add_online(&mut self, mut series: impl Iterator<Item = (Serie, PathBuf)>, files_empty: bool, name: String, update: bool) {
-        let serie = episodate::request_detail(&name);
-        if let Some((mut old_serie, path)) = series.find(|s_p| s_p.0.name == serie.name)  {
-            if update {
-                eprintln!("INFO: The serie \"{}\" already exists. Updating it...", serie.name);
-                old_serie.merge_serie(&serie);
-                if !self.dry_run {
-                    old_serie.print(&self.print_mode, Some(&path));
-                    old_serie.write(path);
+    pub fn add_online(
+        &mut self,
+        mut series: impl Iterator<Item = (Serie, PathBuf)>,
+        fetch_function: fn(&str) -> Serie,
+        names: Vec<String>,
+        update: bool,
+        files_empty: bool,
+    ) {
+        for name in names {
+            let serie = fetch_function(&name);
+            if let Some((mut old_serie, path)) = series.find(|s_p| s_p.0.name == serie.name) {
+                if update {
+                    eprintln!(
+                        "INFO: The serie \"{}\" already exists. Updating it...",
+                        serie.name
+                    );
+                    old_serie.merge_serie(&serie);
+                    if !self.dry_run {
+                        old_serie.print(&self.print_mode, Some(&path));
+                        old_serie.write(path);
+                    }
+                } else {
+                    eprintln!("ERROR: The serie \"{}\" already exists.", serie.name);
+                    process::exit(1);
                 }
             } else {
-                eprintln!("ERROR: The serie \"{}\" already exists.", serie.name);
-                process::exit(1);
-            }
-        } else {
-            if files_empty {
-                let path = self.directory.join(serie.filename());
-                serie.print(&self.print_mode, Some(&path));
-                serie.write(path);
-            } else {
-                eprintln!("WARNING: Can't detect the file to write on. Writing on stdout...");
-                serie.print(&PrintMode::Content, None);
+                if files_empty {
+                    let path = self.directory.join(serie.filename());
+                    serie.print(&self.print_mode, Some(&path));
+                    serie.write(path);
+                } else {
+                    eprintln!("WARNING: Can't detect the file to write on. Writing on stdout...");
+                    serie.print(&PrintMode::Content, None);
+                }
             }
         }
     }
@@ -256,7 +282,9 @@ impl Args {
                     eprint!("(dry-run) ")
                 }
                 io::stderr().flush().expect("Flushing stdout failed.");
-                io::stdin().read_line(&mut input).expect("Reading input failed");
+                io::stdin()
+                    .read_line(&mut input)
+                    .expect("Reading input failed");
                 if input.trim() == "n" {
                     continue;
                 }
@@ -264,14 +292,17 @@ impl Args {
             if self.dry_run {
                 eprintln!("Deleted {} (dry-run)", path.to_str().unwrap());
             } else if let Err(e) = fs::remove_file(&path) {
-                eprintln!("ERROR: Couldn't delete {}. Produced the following error:\n{}", path.to_str().unwrap(), e);
+                eprintln!(
+                    "ERROR: Couldn't delete {}. Produced the following error:\n{}",
+                    path.to_str().unwrap(),
+                    e
+                );
                 process::exit(1);
             } else {
                 eprintln!("Deleted {}", path.to_str().unwrap());
             }
         }
     }
-            
 
     #[inline(always)]
     fn list_series(&self, series: impl Iterator<Item = (Serie, PathBuf)>) {
@@ -280,4 +311,3 @@ impl Args {
         }
     }
 }
-
