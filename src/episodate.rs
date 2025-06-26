@@ -41,14 +41,14 @@ impl Display for TvShow {
     }
 }
 
-pub fn search_write_to_stdout(query: String) {
-    if let Ok(main_response) = request_pages(query.clone(), None) {
+pub fn search_write_to_stdout(query: &str) {
+    if let Ok(main_response) = request_pages(query, None) {
         let pages = main_response.pages;
         let mut handle = io::stdout().lock();
         let _ = write!(handle, "{main_response}");
 
         for i in 2..pages + 1 {
-            if let Ok(response) = request_pages(query.clone(), Some(i)) {
+            if let Ok(response) = request_pages(query, Some(i)) {
                 let _ = write!(handle, "{response}");
             }
         }
@@ -75,7 +75,7 @@ pub fn request_detail(permalink: &str) -> Serie {
     Serie::new(seasons, details.name)
 }
 
-fn request_pages(query: String, page: Option<usize>) -> PageResult<Response> {
+fn request_pages(query: &str, page: Option<usize>) -> PageResult<Response> {
     let page = page.unwrap_or(1);
     let target = format!("https://www.episodate.com/api/search?q={query}&page={page}");
     if let Ok(response) = Client::new().get(target).send() {
