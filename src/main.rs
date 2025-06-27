@@ -3,15 +3,15 @@
 use std::{
     io
 };
-use clap::{CommandFactory, Parser};
+use clap::Parser;
 use bw::{
-    args::{Args, Commands::*, OnlineCommands::*},
+    cli::{Cli, Commands::*, OnlineCommands::*},
 };
 
 //}}}
 
 fn main() -> io::Result<()> {
-    let mut cli = Args::parse();
+    let mut cli = Cli::parse();
     cli.execute();
     Ok(())
 }

@@ -1,4 +1,4 @@
 pub mod utils;
-pub mod args;
+pub mod cli;
 pub mod episodate;
 pub mod serie;
