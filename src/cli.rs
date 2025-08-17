@@ -29,6 +29,10 @@ pub struct Cli {
     #[arg(short, long, default_value = "no-finished", global=true)]
     include: Include,
 
+    /// Whether to include finished shows in searchs or not
+    #[arg(short, long, global=true)]
+    hidden: bool,
+
     /// Print shell completion
     #[command(subcommand)]
     pub command: Option<Commands>,
@@ -132,10 +136,18 @@ pub enum AppMode {
 macro_rules! call_series {
     ($self: expr, $series:expr, $func:ident $(, $arg:expr)*) => {
         if $self.files.is_empty() {
-            match $self.include {
-                Include::NoFinished => $self.$func(&mut $series.by_ref().filter(|s_p| s_p.0.is_not_finished()) $(, $arg)*),
-                Include::Finished => $self.$func(&mut $series.by_ref().filter(|s_p| s_p.0.is_finished()) $(, $arg)*),
-                Include::All => $self.$func(&mut $series $(, $arg)*),
+            if $self.hidden {
+                match $self.include {
+                    Include::NoFinished => $self.$func(&mut $series.by_ref().filter(|s_p| s_p.0.is_not_finished()) $(, $arg)*),
+                    Include::Finished => $self.$func(&mut $series.by_ref().filter(|s_p| s_p.0.is_finished()) $(, $arg)*),
+                    Include::All => $self.$func(&mut $series $(, $arg)*),
+                }
+            } else {
+                match $self.include {
+                    Include::NoFinished => $self.$func(&mut $series.by_ref().filter(|s_p| !s_p.1.file_name().unwrap().to_str().unwrap().starts_with('.') && s_p.0.is_not_finished()) $(, $arg)*),
+                    Include::Finished => $self.$func(&mut $series.by_ref().filter(|s_p| !s_p.1.file_name().unwrap().to_str().unwrap().starts_with('.') && s_p.0.is_finished()) $(, $arg)*),
+                    Include::All => $self.$func(&mut $series.by_ref().filter(|s_p| !s_p.1.file_name().unwrap().to_str().unwrap().starts_with('.')) $(, $arg)*),
+                }
             }
         } else {
             let mut paths = std::mem::take(&mut $self.files);
